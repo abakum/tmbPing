@@ -136,6 +136,14 @@ func worker(ip string, ch cCustomer) {
 				return
 			}
 			if cust.tm == nil { //update
+				if cust.del {
+					for _, cu := range cus {
+						if cu.reply != nil {
+							bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.reply.Chat.ID), MessageID: cu.reply.MessageID})
+						}
+					}
+					return
+				}
 				timeout--
 				if timeout < 1 {
 					fmt.Println("worker timeout", ip)
@@ -255,6 +263,7 @@ func main() {
 	}
 	me, _ = bot.GetMe()
 	// bot.DeleteMyCommands(nil)
+
 	/* 	closer.Bind(func() {
 	   		fmt.Println("Press Enter")
 	   		os.Stdin.Read([]byte{0})
@@ -326,9 +335,11 @@ func main() {
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.CallbackQuery.Message
 			switch update.CallbackQuery.Data {
+			case "close all":
+				ips.write(reIP.FindString(tm.Text), customer{del: true})
+				bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
 			case "close":
 				bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
-			case "close_all":
 			}
 		}, th.AnyCallbackQueryWithMessage())
 

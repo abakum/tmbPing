@@ -1,2 +1,2 @@
 # tmbPing
-Telegram ping bot
+Pinger with telegram bot interface

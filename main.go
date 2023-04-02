@@ -228,7 +228,8 @@ var me *telego.User
 var inlineKeyboard *telego.InlineKeyboardMarkup
 
 func main() {
-	chats = AAA{"-1001788229970", "-1001970078580", "1208474684", "-1001784778261"}
+	chats = os.Args[1:]
+	fmt.Println(chats)
 	inlineKeyboard = tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
 			// tu.InlineKeyboardButton("❗").WithCallbackData("❗"),

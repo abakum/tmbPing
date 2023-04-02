@@ -229,7 +229,12 @@ var inlineKeyboard *telego.InlineKeyboardMarkup
 
 func main() {
 	chats = os.Args[1:]
-	fmt.Println(chats)
+	if len(chats) == 0 {
+		fmt.Printf("Usage: %s AllowedChatID1 AllowedChatID2 AllowedChatIDx\n", os.Args[0])
+		os.Exit(1)
+	} else {
+		fmt.Println("Разрешённые ChatID:", chats)
+	}
 	inlineKeyboard = tu.InlineKeyboard(
 		tu.InlineKeyboardRow(
 			// tu.InlineKeyboardButton("❗").WithCallbackData("❗"),

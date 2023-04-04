@@ -22,43 +22,13 @@ type customer struct {
 	cmd   string          //command
 	reply *telego.Message //task reports
 }
-type mCustomer map[string]customer
 type cCustomer chan customer
 type mcCustomer map[string]cCustomer
 type sCustomer struct {
 	sync.RWMutex
 	mcCustomer
-	mCustomer
 }
 
-/*
-	 func (s *sCustomer) status() (bs string){
-		s.RLock()
-	    defer s.RUnlock()
-		sPing :="✅" //:white_check_mark:
-		if stopwatch {
-			sPing="⏱️" //:stopwatch:
-		}
-		bs := "Bot ищет в чате IP адреса для 🏓" //:ping:
-		If len(s.mCustomer) > 0 {
-			bs := "🔁" //:repeat:
-			if repeatOne{
-				bs="🔂" //:repeat_one:
-			}
-			bs+="🏓"
-			for ip,c := range s.mCustomer{
-				//message_id = ips(i)(1): message_idB = ips(i)(2): dt = ips(i)(3)
-				sPing += "\n"
-				sPing += fmt.Sprintf("[:inbox_tray:](https://t.me/c/%v/%v) ",chat_id, message_id)
-				if len(message_idB)>0{
-					sPing += fmt.Sprintf("[:outbox_tray:](https://t.me/c/%v/%v) ",chat_id,message_idB)
-				}
-				sPing += pingS(ip, dPing(ip))
-			}
-		}
-		bs += sPing
-	}
-*/
 func (s *sCustomer) del(ip string, closed bool) {
 	stdo.Println("sCustomer.del ", ip)
 	s.Lock()
@@ -70,7 +40,6 @@ func (s *sCustomer) del(ip string, closed bool) {
 		}
 	}
 	delete(s.mcCustomer, ip)
-	//delete(s.mCustomer, ip)
 }
 func (s *sCustomer) add(ip string) (ch cCustomer) {
 	stdo.Println("sCustomer.add ", ip)
@@ -101,11 +70,6 @@ func (s *sCustomer) write(ip string, c customer) {
 	} else {
 		s.add(ip) <- c
 	}
-	/* if c.tm!=nil{
-		s.Lock()
-		defer s.Unlock()
-		s.mCustomer[ip]=c
-	} */
 }
 
 func (s *sCustomer) update(c customer) {
@@ -243,7 +207,7 @@ func main() {
 		stdo.Println("Разрешённые ChatID:", chats)
 	}
 	done = make(chan bool)
-	ips = sCustomer{mcCustomer: mcCustomer{}, mCustomer: mCustomer{}}
+	ips = sCustomer{mcCustomer: mcCustomer{}}
 	defer closer.Close()
 	numFL := "(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])"
 	reIP := regexp.MustCompile(numFL + "(\\.(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){2}\\." + numFL)

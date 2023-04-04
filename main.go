@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,9 +18,9 @@ import (
 )
 
 type customer struct {
-	tm    *telego.Message
-	del   bool
-	reply *telego.Message
+	tm    *telego.Message //task
+	cmd   string          //command
+	reply *telego.Message //task reports
 }
 type mCustomer map[string]customer
 type cCustomer chan customer
@@ -58,7 +60,7 @@ type sCustomer struct {
 	}
 */
 func (s *sCustomer) del(ip string, closed bool) {
-	fmt.Println("sCustomer.del ", ip)
+	stdo.Println("sCustomer.del ", ip)
 	s.Lock()
 	defer s.Unlock()
 	if !closed {
@@ -71,7 +73,7 @@ func (s *sCustomer) del(ip string, closed bool) {
 	//delete(s.mCustomer, ip)
 }
 func (s *sCustomer) add(ip string) (ch cCustomer) {
-	fmt.Println("sCustomer.add ", ip)
+	stdo.Println("sCustomer.add ", ip)
 	ch = make(cCustomer, 10)
 	go worker(ip, ch)
 	s.Lock()
@@ -82,11 +84,11 @@ func (s *sCustomer) add(ip string) (ch cCustomer) {
 }
 
 func (s *sCustomer) write(ip string, c customer) {
-	fmt.Println("sCustomer.write ", ip, c)
+	stdo.Println("sCustomer.write ", ip, c)
 	defer func() {
 		// recover from panic caused by writing to a closed channel
 		if err := recover(); err != nil {
-			fmt.Println("sCustomer.write error:", err)
+			stdo.Println("sCustomer.write error:", err)
 			s.del(ip, true)
 			return
 		}
@@ -106,103 +108,107 @@ func (s *sCustomer) write(ip string, c customer) {
 	} */
 }
 
-func (s *sCustomer) update() {
+func (s *sCustomer) update(c customer) {
 	s.RLock()
 	k, _ := m2kv(s.mcCustomer)
 	s.RUnlock()
 	for _, ip := range k {
-		s.write(ip, customer{})
+		s.write(ip, c)
 	}
 }
 
 type customers []customer
 
 func worker(ip string, ch cCustomer) {
+	log.SetPrefix("worker ")
+	var buttons *telego.InlineKeyboardMarkup
 	var err error
-	status := ""
-	// timeout:=8*60
-	timeout := 3 //3 min
+	status := "?"
+	dd := time.Duration(time.Minute * 2)
+	deadline := time.Now().Add(dd)
 	cus := customers{}
 	defer ips.del(ip, false)
 	for {
 		select {
 		case <-done:
-			fmt.Println("worker done", ip)
+			stdo.Println("worker done", ip)
 			done <- true //done other worker
 			return
 		case cust, ok := <-ch:
 			if !ok {
-				fmt.Println("worker channel closed", ip)
+				stdo.Println("worker channel closed", ip)
 				return
 			}
+			oStatus := status
 			if cust.tm == nil { //update
-				if cust.del {
-					for _, cu := range cus {
-						if cu.reply != nil {
-							bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.reply.Chat.ID), MessageID: cu.reply.MessageID})
-						}
-					}
-					return
-				}
-				timeout--
-				if timeout < 1 {
-					fmt.Println("worker timeout", ip)
-					return
-				}
-			} else {
-				tmr := cust.tm.ReplyToMessage
-				if tmr != nil && tmr.From.ID == me.ID { //reply to me
-					nCus := customers{}
-					for _, cu := range cus {
-						if cu.tm.Chat.ID == tmr.Chat.ID {
-							if cu.reply != nil && tmr.Chat.ID == cu.reply.Chat.ID && tmr.MessageID != cu.reply.MessageID {
+				switch cust.cmd { //
+				case "⏸️":
+					deadline = time.Now().Add(-refresh)
+					oStatus = cust.cmd
+				case "🔁":
+					deadline = time.Now().Add(dd)
+					oStatus = cust.cmd
+				case "🔂":
+					deadline = time.Now().Add(refresh)
+					oStatus = cust.cmd
+				default: // status+"❌" status+"⏸️❌"
+					stdo.Println("----------", cust.cmd, status, strings.TrimSuffix(cust.cmd, "❌") == strings.TrimSuffix(status, "⏸️"))
+					if cust.cmd == "❌" || strings.TrimSuffix(cust.cmd, "❌") == strings.TrimSuffix(status, "⏸️") {
+						for _, cu := range cus {
+							if cu.reply != nil {
 								bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.reply.Chat.ID), MessageID: cu.reply.MessageID})
 							}
-						} else {
-							nCus = append(nCus, cu)
 						}
-					}
-					fmt.Println(cus)
-					fmt.Println(nCus)
-					cus = nCus
-					fmt.Println(cus)
-					if len(cus) == 0 {
-						fmt.Println("worker forget", ip, tmr.Chat.ID, tmr.MessageID)
 						return
 					}
-					continue
-				} else {
-					cus = append(cus, cust)
 				}
+			} else {
+				cus = append(cus, cust)
 			}
-			fmt.Println("worker", ip, cust, len(ch))
-			oStatus := status
-			status, err = ping(ip)
-			if err != nil {
-				fmt.Println("ping", ip, err)
-				return
+			stdo.Println("worker", ip, cust, len(ch), status, time.Now().Before(deadline))
+			if time.Now().Before(deadline) {
+				status, err = ping(ip)
+				if err != nil {
+					stdo.Println("ping", ip, err)
+					return
+				}
+				buttons = tu.InlineKeyboard(
+					tu.InlineKeyboardRow(
+						tu.InlineKeyboardButton("⏸️").WithCallbackData("⏸️"),
+						tu.InlineKeyboardButton("❌").WithCallbackData("❌"),
+						tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
+					),
+				)
+			} else {
+				buttons = tu.InlineKeyboard(
+					tu.InlineKeyboardRow(
+						tu.InlineKeyboardButton("🔁").WithCallbackData("🔁"),
+						tu.InlineKeyboardButton("🔂").WithCallbackData("🔂"),
+						tu.InlineKeyboardButton("❌").WithCallbackData("❌"),
+						tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
+					),
+				)
+				if !strings.HasSuffix(status, "⏸️") {
+					status += "⏸️"
+				}
 			}
 			for i, cu := range cus {
-				fmt.Println(i, cu, status, oStatus)
+				stdo.Println(i, cu, status, oStatus)
 				if cu.reply == nil || status != oStatus {
-					if status != "✅" {
-						cus[i].reply, _ = bot.SendMessage(tu.MessageWithEntities(tu.ID(cu.tm.Chat.ID),
-							tu.Entity(status),
-							tu.Entity("/"+ip).Code(),
-						).WithReplyToMessageID(cu.tm.MessageID).WithReplyMarkup(inlineKeyboard))
-
-					} else {
-						cus[i].reply, _ = bot.SendMessage(tu.MessageWithEntities(tu.ID(cu.tm.Chat.ID),
-							tu.Entity(status),
-							tu.Entity("/"+ip).Code(),
-						).WithReplyToMessageID(cu.tm.MessageID))
+					if cu.reply != nil {
+						bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.reply.Chat.ID), MessageID: cu.reply.MessageID})
 					}
+					cus[i].reply, _ = bot.SendMessage(tu.MessageWithEntities(tu.ID(cu.tm.Chat.ID),
+						tu.Entity(status),
+						tu.Entity("/"+ip).Code(),
+					).WithReplyToMessageID(cu.tm.MessageID).WithReplyMarkup(buttons))
+
 				}
 			}
-			if status == "✅" {
-				fmt.Println("worker stop", ip)
-				return
-			}
+			/* if status == "✅" {
+				stdo.Println("worker stop", ip)
+				deadline = time.Now()
+			} */
 		}
 	}
 }
@@ -216,7 +222,7 @@ func (a AAA) allowed(ChatID int64) bool {
 			return true
 		}
 	}
-	fmt.Println(s, "not in", a)
+	stdo.Println(s, "not in", a)
 	return false
 }
 
@@ -224,28 +230,18 @@ var chats AAA
 var done chan bool
 var ips sCustomer
 var bot *telego.Bot
-var me *telego.User
-var inlineKeyboard *telego.InlineKeyboardMarkup
+var refresh time.Duration = time.Second * 60
+var stdo *log.Logger
 
 func main() {
+	stdo = log.New(os.Stdout, "main ", log.Lshortfile|log.Ltime) //log.Ldate
 	chats = os.Args[1:]
 	if len(chats) == 0 {
-		fmt.Printf("Usage: %s AllowedChatID1 AllowedChatID2 AllowedChatIDx\n", os.Args[0])
+		stdo.Printf("Usage: %s AllowedChatID1 AllowedChatID2 AllowedChatIDx\n", os.Args[0])
 		os.Exit(1)
 	} else {
-		fmt.Println("Разрешённые ChatID:", chats)
+		stdo.Println("Разрешённые ChatID:", chats)
 	}
-	inlineKeyboard = tu.InlineKeyboard(
-		tu.InlineKeyboardRow(
-			// tu.InlineKeyboardButton("❗").WithCallbackData("❗"),
-			// tu.InlineKeyboardButton("✅").WithCallbackData("✅"),
-			// tu.InlineKeyboardButton("🔁").WithCallbackData("repeat"),
-			// tu.InlineKeyboardButton("🔂").WithCallbackData("repeat_one"),
-			// tu.InlineKeyboardButton("⏸️").WithCallbackData("pause"),
-			tu.InlineKeyboardButton("❎").WithCallbackData("close"),
-			tu.InlineKeyboardButton("❌").WithCallbackData("close all"),
-		),
-	)
 	done = make(chan bool)
 	ips = sCustomer{mcCustomer: mcCustomer{}, mCustomer: mCustomer{}}
 	defer closer.Close()
@@ -264,14 +260,13 @@ func main() {
 	// use in development only
 	bot, err = telego.NewBot(os.Getenv("TOKEN"), telego.WithDefaultDebugLogger())
 	if err != nil {
-		fmt.Println(err)
+		stdo.Println(err)
 		closer.Close()
 	}
-	me, _ = bot.GetMe()
 	// bot.DeleteMyCommands(nil)
 
 	/* 	closer.Bind(func() {
-	   		fmt.Println("Press Enter")
+	   		stdo.Println("Press Enter")
 	   		os.Stdin.Read([]byte{0})
 	   	})
 	*/
@@ -283,7 +278,7 @@ func main() {
 		bot.DeleteWebhook(&telego.DeleteWebhookParams{
 			DropPendingUpdates: true,
 		})
-		fmt.Println("closer bot.DeleteWebhook")
+		stdo.Println("closer bot.DeleteWebhook")
 	})
 
 	_ = manInTheMiddle(bot)
@@ -300,34 +295,34 @@ func main() {
 	// Stop server receiving requests from the Telegram
 	closer.Bind(func() {
 		_ = bot.StopWebhook()
-		fmt.Println("closer bot.StopWebhook")
+		stdo.Println("closer bot.StopWebhook")
 	})
 
 	go func() {
-		ticker := time.NewTicker(60 * time.Second)
+		ticker := time.NewTicker(refresh)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-done:
-				fmt.Println("Ticker done")
+				stdo.Println("Ticker done")
 				done <- true
 				return
 			case t := <-ticker.C:
-				fmt.Println("Tick at", t)
-				ips.update()
+				stdo.Println("Tick at", t)
+				ips.update(customer{})
 			}
 		}
 	}()
 
 	closer.Bind(func() {
 		done <- true
-		fmt.Println("closer done <- true")
+		stdo.Println("closer done <- true")
 	})
 
 	if deb {
 		// Loop through all updates when they came
 		for update := range updates {
-			fmt.Printf("Update: %+v\n", update)
+			stdo.Printf("Update: %+v\n", update)
 		}
 	} else {
 		// Create bot handler and specify from where to get updates
@@ -336,15 +331,22 @@ func main() {
 		// Stop handling updates
 		closer.Bind(func() {
 			bh.Stop()
-			fmt.Println("closer bh.Stop")
+			stdo.Println("closer bh.Stop")
 		})
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.CallbackQuery.Message
-			switch update.CallbackQuery.Data {
-			case "close all":
-				ips.write(reIP.FindString(tm.Text), customer{del: true})
-				bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
-			case "close":
+			Data := update.CallbackQuery.Data
+			if strings.HasPrefix(Data, "…") {
+				bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID, Text: "🏓" + Data})
+				ips.update(customer{cmd: strings.TrimPrefix(Data, "…")})
+			} else {
+				if Data != "❎" {
+					ip := reIP.FindString(tm.Text)
+					bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID, Text: "🏓" + ip + Data})
+					ips.write(ip, customer{cmd: Data})
+				}
+			}
+			if Data == "❎" || strings.HasSuffix(Data, "❌") {
 				bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
 			}
 		}, th.AnyCallbackQueryWithMessage())
@@ -355,7 +357,7 @@ func main() {
 				return
 			}
 			keys := reIP.FindAllString(tc, -1)
-			fmt.Println("bh.Handle anyWithIP", keys, ctm)
+			stdo.Println("bh.Handle anyWithIP", keys, ctm)
 			for _, ip := range keys {
 				ips.write(ip, customer{tm: ctm})
 			}
@@ -369,8 +371,18 @@ func main() {
 			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 				tu.Entity("Ожидался список IP адресов\n"),
 				tu.Entity("/127.0.0.1 127.0.0.2 127.0.0.254").Code(),
-				tu.Entity("🏓"), //:ping:
-			).WithReplyToMessageID(tm.MessageID).WithReplyMarkup(inlineKeyboard))
+				tu.Entity("🏓"),
+			).WithReplyToMessageID(tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(
+				tu.InlineKeyboardRow(
+					tu.InlineKeyboardButton("🔁").WithCallbackData("…🔁"),
+					tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
+					tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
+					tu.InlineKeyboardButton("✅❌").WithCallbackData("…✅❌"),
+					tu.InlineKeyboardButton("⁉️❌").WithCallbackData("…⁉️❌"),
+					tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
+					tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
+				),
+			)))
 		}, th.AnyCommand())
 
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
@@ -388,7 +400,7 @@ func main() {
 				return
 			}
 			for _, nu := range tm.NewChatMembers {
-				fmt.Println(nu.ID)
+				stdo.Println(nu.ID)
 				bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 					tu.Entity("Здорово, селяне!\n"),
 					tu.Entity("Карета готова?\n").Strikethrough(),
@@ -403,5 +415,5 @@ func main() {
 		// Start handling updates
 		bh.Start()
 	}
-	fmt.Println("os.Exit(0)")
+	stdo.Println("os.Exit(0)")
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"runtime"
 	"time"
 
@@ -9,6 +8,8 @@ import (
 )
 
 func ping(ip string) (status string, err error) {
+	defer stdo.SetPrefix(stdo.Prefix())
+	stdo.SetPrefix("ping ")
 	pinger, err := probing.NewPinger(ip)
 	if err != nil {
 		return
@@ -25,10 +26,10 @@ func ping(ip string) (status string, err error) {
 	stats := pinger.Statistics() // get send/receive/duplicate/rtt stats
 	if stats.PacketsRecv == pinger.Count {
 		status = "✅"
-		fmt.Printf("%v echoReply %d<rtt~%d<%d\n", ip, stats.MinRtt.Milliseconds(), stats.AvgRtt.Milliseconds(), stats.MaxRtt.Milliseconds())
+		stdo.Printf("%v echoReply %d<rtt~%d<%d\n", ip, stats.MinRtt.Milliseconds(), stats.AvgRtt.Milliseconds(), stats.MaxRtt.Milliseconds())
 	} else {
-		status = "❗"
-		fmt.Printf("%v %d/%d packets received\n", ip, stats.PacketsRecv, pinger.Count)
+		status = "⁉️" //❗
+		stdo.Printf("%v %d/%d packets received\n", ip, stats.PacketsRecv, pinger.Count)
 	}
 	return
 }

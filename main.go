@@ -85,9 +85,9 @@ type customers []customer
 
 func worker(ip string, ch cCustomer) {
 	log.SetPrefix("worker ")
-	var buttons *telego.InlineKeyboardMarkup
+	// var buttons *telego.InlineKeyboardMarkup
 	var err error
-	status := "?"
+	status := ""
 	dd := time.Duration(time.Minute * 2)
 	deadline := time.Now().Add(dd)
 	cus := customers{}
@@ -105,7 +105,7 @@ func worker(ip string, ch cCustomer) {
 			}
 			oStatus := status
 			if cust.tm == nil { //update
-				switch cust.cmd { //
+				switch cust.cmd {
 				case "⏸️":
 					deadline = time.Now().Add(-refresh)
 					oStatus = cust.cmd
@@ -115,8 +115,7 @@ func worker(ip string, ch cCustomer) {
 				case "🔂":
 					deadline = time.Now().Add(refresh)
 					oStatus = cust.cmd
-				default: // status+"❌" status+"⏸️❌"
-					stdo.Println("----------", cust.cmd, status, strings.TrimSuffix(cust.cmd, "❌") == strings.TrimSuffix(status, "⏸️"))
+				default:
 					if cust.cmd == "❌" || strings.TrimSuffix(cust.cmd, "❌") == strings.TrimSuffix(status, "⏸️") {
 						for _, cu := range cus {
 							if cu.reply != nil {
@@ -130,31 +129,27 @@ func worker(ip string, ch cCustomer) {
 				cus = append(cus, cust)
 			}
 			stdo.Println("worker", ip, cust, len(ch), status, time.Now().Before(deadline))
+			ikbse := []telego.InlineKeyboardButton{
+				tu.InlineKeyboardButton("❌").WithCallbackData("❌"),
+				tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
+			}
+			ikbs := append([]telego.InlineKeyboardButton{
+				tu.InlineKeyboardButton("⏸️").WithCallbackData("⏸️"),
+			}, ikbse...)
 			if time.Now().Before(deadline) {
 				status, err = ping(ip)
 				if err != nil {
 					stdo.Println("ping", ip, err)
 					return
 				}
-				buttons = tu.InlineKeyboard(
-					tu.InlineKeyboardRow(
-						tu.InlineKeyboardButton("⏸️").WithCallbackData("⏸️"),
-						tu.InlineKeyboardButton("❌").WithCallbackData("❌"),
-						tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
-					),
-				)
 			} else {
-				buttons = tu.InlineKeyboard(
-					tu.InlineKeyboardRow(
-						tu.InlineKeyboardButton("🔁").WithCallbackData("🔁"),
-						tu.InlineKeyboardButton("🔂").WithCallbackData("🔂"),
-						tu.InlineKeyboardButton("❌").WithCallbackData("❌"),
-						tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
-					),
-				)
 				if !strings.HasSuffix(status, "⏸️") {
 					status += "⏸️"
 				}
+				ikbs = append([]telego.InlineKeyboardButton{
+					tu.InlineKeyboardButton("🔁").WithCallbackData("🔁"),
+					tu.InlineKeyboardButton("🔂").WithCallbackData("🔂"),
+				}, ikbse...)
 			}
 			for i, cu := range cus {
 				stdo.Println(i, cu, status, oStatus)
@@ -165,14 +160,9 @@ func worker(ip string, ch cCustomer) {
 					cus[i].reply, _ = bot.SendMessage(tu.MessageWithEntities(tu.ID(cu.tm.Chat.ID),
 						tu.Entity(status),
 						tu.Entity("/"+ip).Code(),
-					).WithReplyToMessageID(cu.tm.MessageID).WithReplyMarkup(buttons))
-
+					).WithReplyToMessageID(cu.tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs...))))
 				}
 			}
-			/* if status == "✅" {
-				stdo.Println("worker stop", ip)
-				deadline = time.Now()
-			} */
 		}
 	}
 }
@@ -332,21 +322,24 @@ func main() {
 		// so this handler will be called on any command except `/start` command
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
+			ikbs := []telego.InlineKeyboardButton{
+				tu.InlineKeyboardButton("🔁").WithCallbackData("…🔁"),
+				tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
+				tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
+				tu.InlineKeyboardButton("✅❌").WithCallbackData("…✅❌"),
+				tu.InlineKeyboardButton("⁉️❌").WithCallbackData("…⁉️❌"),
+				tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
+				tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
+			}
+			ikbsf := len(ikbs) - 1
+			if chats.allowed(tm.From.ID) {
+				ikbsf = 0
+			}
 			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 				tu.Entity("Ожидался список IP адресов\n"),
 				tu.Entity("/127.0.0.1 127.0.0.2 127.0.0.254").Code(),
 				tu.Entity("🏓"),
-			).WithReplyToMessageID(tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(
-				tu.InlineKeyboardRow(
-					tu.InlineKeyboardButton("🔁").WithCallbackData("…🔁"),
-					tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
-					tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
-					tu.InlineKeyboardButton("✅❌").WithCallbackData("…✅❌"),
-					tu.InlineKeyboardButton("⁉️❌").WithCallbackData("…⁉️❌"),
-					tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
-					tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
-				),
-			)))
+			).WithReplyToMessageID(tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
 		}, th.AnyCommand())
 
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {

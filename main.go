@@ -48,7 +48,6 @@ func (s *sCustomer) add(ip string) (ch cCustomer) {
 	s.Lock()
 	defer s.Unlock()
 	s.mcCustomer[ip] = ch
-	//s.mCustomer[ip] = mCustomer{}
 	return
 }
 
@@ -84,11 +83,9 @@ func (s *sCustomer) update(c customer) {
 type customers []customer
 
 func worker(ip string, ch cCustomer) {
-	log.SetPrefix("worker ")
 	// var buttons *telego.InlineKeyboardMarkup
 	var err error
 	status := ""
-	dd := time.Duration(time.Minute * 2)
 	deadline := time.Now().Add(dd)
 	cus := customers{}
 	defer ips.del(ip, false)
@@ -180,12 +177,15 @@ func (a AAA) allowed(ChatID int64) bool {
 	return false
 }
 
-var chats AAA
-var done chan bool
-var ips sCustomer
-var bot *telego.Bot
-var refresh time.Duration = time.Second * 60
-var stdo *log.Logger
+var (
+	chats   AAA
+	done    chan bool
+	ips     sCustomer
+	bot     *telego.Bot
+	refresh time.Duration = time.Second * 60
+	dd      time.Duration = time.Minute * 2
+	stdo    *log.Logger
+)
 
 func main() {
 	stdo = log.New(os.Stdout, "main ", log.Lshortfile|log.Ltime) //log.Ldate
@@ -310,7 +310,7 @@ func main() {
 			if !chats.allowed(ctm.Chat.ID) {
 				return
 			}
-			keys := reIP.FindAllString(tc, -1)
+			keys, _ := set(reIP.FindAllString(tc, -1))
 			stdo.Println("bh.Handle anyWithIP", keys, ctm)
 			for _, ip := range keys {
 				ips.write(ip, customer{tm: ctm})
@@ -368,7 +368,6 @@ func main() {
 			}
 
 		}, newMember())
-
 		// Start handling updates
 		bh.Start()
 	}

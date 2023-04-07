@@ -8,8 +8,6 @@ import (
 )
 
 func ping(ip string) (status string, err error) {
-	defer stdo.SetPrefix(stdo.Prefix())
-	stdo.SetPrefix("ping ")
 	pinger, err := probing.NewPinger(ip)
 	if err != nil {
 		return

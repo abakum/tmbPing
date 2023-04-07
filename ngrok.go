@@ -17,8 +17,6 @@ import (
 )
 
 func ngrokUrlAddr() (PublicURL string, host string, err error) {
-	defer stdo.SetPrefix(stdo.Prefix())
-	stdo.SetPrefix("ngrokUrlAddr ")
 	web_addr := os.Getenv("web_addr")
 	if web_addr == "" {
 		web_addr = "localhost:4040"
@@ -75,8 +73,6 @@ func ngrokUrlAddr() (PublicURL string, host string, err error) {
 }
 
 func ngrokUrlTo(ctx context.Context, NGROK_API_KEY string) (PublicURL string, host string, err error) {
-	defer stdo.SetPrefix(stdo.Prefix())
-	stdo.SetPrefix("ngrokUrlTo ")
 	// construct the api client
 	clientConfig := ngrok.NewClientConfig(NGROK_API_KEY)
 
@@ -109,8 +105,6 @@ func ngrokUrlTo(ctx context.Context, NGROK_API_KEY string) (PublicURL string, ho
 }
 
 func manInTheMiddle(bot *telego.Bot) bool {
-	defer stdo.SetPrefix(stdo.Prefix())
-	stdo.SetPrefix("manInTheMiddle ")
 	// Receive information about webhook
 	info, err := bot.GetWebhookInfo()
 	if err != nil {

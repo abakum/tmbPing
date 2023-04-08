@@ -23,11 +23,9 @@ func worker(ip string, ch cCustomer) {
 			for _, cu := range cus {
 				cu.Tm = &telego.Message{MessageID: cu.Tm.MessageID, From: &telego.User{ID: cu.Tm.From.ID}, Chat: telego.Chat{ID: cu.Tm.Chat.ID}}
 				cu.Cmd = ip
-				//cu.Status = status
 				cu.Tm.Text = status
-				//cu.Deadline = deadline
 				cu.Tm.Date = deadline.Unix()
-				stdo.Println("---Save ", status, deadline)
+				//stdo.Println("---Save ", status, deadline)
 				save <- cu
 			}
 			stdo.Println("done", ip)
@@ -57,11 +55,9 @@ func worker(ip string, ch cCustomer) {
 				}
 			} else { //load
 				if cust.Cmd == ip && status == "" {
-					//status = cust.Status
 					status = cust.Tm.Text
-					//deadline = cust.Deadline
 					deadline = time.Unix(cust.Tm.Date, 0)
-					stdo.Println("---Load ", status, deadline)
+					//stdo.Println("---Load ", status, deadline)
 				}
 				cus = append(cus, cust)
 			}

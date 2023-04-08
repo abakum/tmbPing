@@ -34,3 +34,10 @@ func set[V comparable](vs []V) (set []V, m map[V]struct{}) {
 	}
 	return
 }
+
+func tf[V any](ok bool, t, f V) V {
+	if ok {
+		return t
+	}
+	return f
+}

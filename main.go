@@ -19,11 +19,9 @@ import (
 )
 
 type customer struct {
-	Tm       *telego.Message `json:"tm,omitempty"`    //task
-	Cmd      string          `json:"cmd,omitempty"`   //command
-	Reply    *telego.Message `json:"reply,omitempty"` //task reports
-	Status   string          `json:"status,omitempty"`
-	Deadline time.Time       `json:"deadline,omitempty"`
+	Tm    *telego.Message `json:"tm,omitempty"`    //task
+	Cmd   string          `json:"cmd,omitempty"`   //command
+	Reply *telego.Message `json:"reply,omitempty"` //task reports
 }
 type cCustomer chan customer
 type mcCustomer map[string]cCustomer
@@ -39,7 +37,7 @@ func (s *sCustomer) close() {
 	s.Unlock()
 	if len(s.mcCustomer) == 0 {
 		saveDone <- true
-		stdo.Println("ips.close saveDone <- true")
+		stdo.Println("sCustomer.close saveDone <- true")
 	}
 }
 
@@ -250,6 +248,7 @@ func main() {
 			tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
 		}
 		var ikbsf int
+		//AnyCallbackQueryWithMessage
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			uc := update.CallbackQuery
 			tm := uc.Message
@@ -260,33 +259,39 @@ func main() {
 			}
 			ups := fmt.Sprintf("%s %s @%s #%d%s", uc.From.FirstName, uc.From.LastName, uc.From.Username, uc.From.ID, notAllowed(my))
 			ok := chats.allowed(uc.From.ID)
-			ikbsf = len(ikbs) - 1
-			if ok {
-				ikbsf = 0
-			}
+			ikbsf = tf(ok, 0, len(ikbs)-1)
 			Data := update.CallbackQuery.Data
 			if strings.HasPrefix(Data, "…") {
 				bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID, Text: ups + Data, ShowAlert: !my})
-				if ok && Data == "…" { //to private
-					bot.SendMessage(tu.Message(tu.ID(uc.From.ID), "🏓").WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
+				if !my {
 					return
 				}
-				if my {
-					ips.update(customer{Cmd: strings.TrimPrefix(Data, "…")})
-				}
-			} else {
-				if Data != "❎" {
-					bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID, Text: ups + ip + Data, ShowAlert: !my})
-					if my {
-						ips.write(ip, customer{Cmd: Data})
+				if ok && Data == "…" {
+					rm := tu.InlineKeyboard(tm.ReplyMarkup.InlineKeyboard[0])
+					if len(tm.ReplyMarkup.InlineKeyboard) == 1 {
+						rm = tu.InlineKeyboard(tm.ReplyMarkup.InlineKeyboard[0], tu.InlineKeyboardRow(ikbs[ikbsf:len(ikbs)-1]...))
 					}
+					bot.EditMessageReplyMarkup(&telego.EditMessageReplyMarkupParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID, ReplyMarkup: rm})
+					return
 				}
+				ips.update(customer{Cmd: strings.TrimPrefix(Data, "…")})
+			} else {
+				bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID, Text: ups + ip + Data, ShowAlert: !my})
+				if !my {
+					return
+				}
+				if Data != "❎" {
+					ips.write(ip, customer{Cmd: Data})
+				}
+			}
+			if !my {
+				return
 			}
 			if Data == "❎" || strings.HasSuffix(Data, "❌") {
 				bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
 			}
 		}, th.AnyCallbackQueryWithMessage())
-
+		//anyWithIP
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tc, ctm := tmtc(update)
 			ok, ups := allowed(ctm.From.ID, ctm.Chat.ID)
@@ -306,9 +311,7 @@ func main() {
 			}
 		}, anyWithIP(reIP))
 
-		// Register new handler with match on any command
-		// Handlers will match only once and in order of registration,
-		// so this handler will be called on any command except `/start` command
+		//AnyCommand
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
 			ok, ups := allowed(tm.From.ID, tm.Chat.ID)
@@ -329,7 +332,7 @@ func main() {
 				mecs[mecsf:]...,
 			).WithReplyToMessageID(tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
 		}, th.AnyCommand())
-
+		//leftChat
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
 			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
@@ -338,7 +341,7 @@ func main() {
 				tu.Entity("Милый...").Italic(), tu.Entity("😢"),
 			).WithReplyToMessageID(tm.MessageID))
 		}, leftChat())
-
+		//newMember
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
 			if !chats.allowed(tm.Chat.ID) {

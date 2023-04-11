@@ -13,6 +13,7 @@ require (
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
+	github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21
 	github.com/fasthttp/router v1.4.17 // indirect
 	github.com/goccy/go-json v0.10.1 // indirect
 	github.com/klauspost/compress v1.15.9 // indirect

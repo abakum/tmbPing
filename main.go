@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cloudfoundry/jibber_jabber"
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
@@ -52,9 +53,12 @@ func (s *sCustomer) del(ip string, closed bool) {
 		}
 	}
 	delete(s.mcCustomer, ip)
-	if s.save && len(s.mcCustomer) == 0 {
-		saveDone <- true
-		stdo.Println("del saveDone <- true")
+	if len(s.mcCustomer) == 0 {
+		defer ticker.Reset(dd)
+		if s.save {
+			saveDone <- true
+			stdo.Println("del saveDone <- true")
+		}
 	}
 }
 func (s *sCustomer) add(ip string) (ch cCustomer) {
@@ -63,6 +67,9 @@ func (s *sCustomer) add(ip string) (ch cCustomer) {
 	go worker(ip, ch)
 	s.Lock()
 	defer s.Unlock()
+	if len(s.mcCustomer) == 0 {
+		defer ticker.Reset(refresh)
+	}
 	s.mcCustomer[ip] = ch
 	return
 }
@@ -96,6 +103,12 @@ func (s *sCustomer) update(c customer) {
 	}
 }
 
+func (s *sCustomer) count() int {
+	s.RLock()
+	defer s.RUnlock()
+	return len(s.mcCustomer)
+}
+
 type customers []customer
 
 type AAA []string
@@ -111,27 +124,75 @@ func (a AAA) allowed(ChatID int64) bool {
 	return false
 }
 
+type mss map[string]string
+
+func (m mss) add(key string, vals ...string) (val string) {
+	var b0, a0, b, a string
+	var ok bool
+	for k, v := range vals {
+		if k == 0 {
+			b0, a0, ok = strings.Cut(v, ":")
+			if !ok {
+				b0 = "en"
+				a0 = v
+			}
+			_, ok = m[b0+":"+a0]
+			if !ok {
+				m[b0+":"+a0] = a0
+			}
+		} else {
+			b, a, ok = strings.Cut(v, ":")
+			if !ok {
+				b = "ru"
+				a = v
+			}
+			_, ok = m[b+":"+a0]
+			if !ok {
+				m[b+":"+a0] = a
+			}
+		}
+	}
+	val, ok = m[key+":"+a0]
+	if !ok {
+		val = a0
+	}
+	return
+}
+
 var (
 	chats       AAA
 	done        chan bool
 	ips         sCustomer
 	bot         *telego.Bot
 	refresh     time.Duration = time.Second * 60
-	dd          time.Duration = time.Minute * 2
+	dd          time.Duration = time.Hour * 1
 	stdo        *log.Logger
 	save        cCustomer
 	saveDone    chan bool
 	tmbPingJson string = "tmbPing.json"
+	ticker      *time.Ticker
+	dic         mss
 )
 
 func main() {
-	stdo = log.New(os.Stdout, "", log.Lshortfile|log.Ltime) //log.Ldate
+	dic = mss{}
+	stdo = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
+	ul, err := jibber_jabber.DetectLanguage()
+	if err != nil {
+		ul = "ru"
+	}
 	chats = os.Args[1:]
 	if len(chats) == 0 {
-		stdo.Printf("Usage: %s AllowedChatID1 AllowedChatID2 AllowedChatIDx\n", os.Args[0])
+		stdo.Printf(dic.add(ul,
+			"en:Usage: %s AllowedChatID1 AllowedChatID2 AllowedChatIDx\n",
+			"ru:Использование: %s РазрешённыйChatID1 РазрешённыйChatID2 РазрешённыйChatIDх\n",
+		), os.Args[0])
 		os.Exit(1)
 	} else {
-		stdo.Println("Разрешённые ChatID:", chats)
+		stdo.Println(dic.add(ul,
+			"en:Allowed ChatID:",
+			"ru:Разрешённые ChatID:",
+		), chats)
 	}
 	// ex, err := os.Executable()
 	ex, err := os.Getwd()
@@ -145,18 +206,27 @@ func main() {
 	defer closer.Close()
 	numFL := "(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])"
 	reIP := regexp.MustCompile(numFL + "(\\.(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){2}\\." + numFL)
+	//	reYYYYMMDD := regexp.MustCompile("([12][0-9][0-9][0-9])(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|30|31)")
 	deb := false
 	publicURL := "https://localhost"
 	addr := "localhost:443"
 	publicURL, addr, err = ngrokUrlAddr()
 	if err != nil {
-		if NGROK_API_KEY := os.Getenv("NGROK_API_KEY"); NGROK_API_KEY != "" {
+		if NGROK_API_KEY, ok := os.LookupEnv("NGROK_API_KEY"); !ok {
 			publicURL, addr, _ = ngrokUrlTo(context.Background(), NGROK_API_KEY)
 		}
 	}
+	token, ok := os.LookupEnv("TOKEN")
+	if !ok {
+		stdo.Println(dic.add(ul,
+			"en:set TOKEN=BOT_TOKEN",
+			"ru:Присвойте BOT_TOKEN переменной окружения TOKEN",
+		))
+		closer.Close()
+	}
 	// Note: Please keep in mind that default logger may expose sensitive information,
 	// use in development only
-	bot, err = telego.NewBot(os.Getenv("TOKEN"), telego.WithDefaultDebugLogger())
+	bot, err = telego.NewBot(token, telego.WithDefaultDebugLogger())
 	if err != nil {
 		stdo.Println(err)
 		closer.Close()
@@ -201,10 +271,9 @@ func main() {
 		ips.close()
 		stdo.Println("closer ips.close")
 	})
-	loader()
 
 	go func() {
-		ticker := time.NewTicker(refresh)
+		ticker = time.NewTicker(dd)
 		defer ticker.Stop()
 		for {
 			select {
@@ -223,6 +292,8 @@ func main() {
 		done <- true
 		stdo.Println("closer done <- true")
 	})
+
+	loader()
 
 	if deb {
 		// Loop through all updates when they came
@@ -252,49 +323,50 @@ func main() {
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			uc := update.CallbackQuery
 			tm := uc.Message
-			ip := reIP.FindString(tm.Text)
 			my := uc.From.ID == tm.Chat.ID
 			if tm.ReplyToMessage != nil {
 				my = uc.From.ID == tm.ReplyToMessage.From.ID
 			}
-			ups := fmt.Sprintf("%s %s @%s #%d%s", uc.From.FirstName, uc.From.LastName, uc.From.Username, uc.From.ID, notAllowed(my))
-			ok := chats.allowed(uc.From.ID)
-			ikbsf = tf(ok, 0, len(ikbs)-1)
+			ip := reIP.FindString(tm.Text)
 			Data := update.CallbackQuery.Data
 			if strings.HasPrefix(Data, "…") {
-				bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID, Text: ups + Data, ShowAlert: !my})
-				if !my {
-					return
-				}
-				if ok && Data == "…" {
-					rm := tu.InlineKeyboard(tm.ReplyMarkup.InlineKeyboard[0])
-					if len(tm.ReplyMarkup.InlineKeyboard) == 1 {
-						rm = tu.InlineKeyboard(tm.ReplyMarkup.InlineKeyboard[0], tu.InlineKeyboardRow(ikbs[ikbsf:len(ikbs)-1]...))
-					}
-					bot.EditMessageReplyMarkup(&telego.EditMessageReplyMarkupParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID, ReplyMarkup: rm})
-					return
-				}
-				ips.update(customer{Cmd: strings.TrimPrefix(Data, "…")})
-			} else {
-				bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID, Text: ups + ip + Data, ShowAlert: !my})
-				if !my {
-					return
-				}
-				if Data != "❎" {
-					ips.write(ip, customer{Cmd: Data})
-				}
+				ip = ""
 			}
+			ups := fmt.Sprintf("%s %s @%s #%d%s", uc.From.FirstName, uc.From.LastName, uc.From.Username, uc.From.ID, notAllowed(my, 0, tm.From.LanguageCode))
+			bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID, Text: ups + tf(ips.count() == 0, "∅", ip+Data), ShowAlert: !my})
 			if !my {
 				return
 			}
-			if Data == "❎" || strings.HasSuffix(Data, "❌") {
+			if Data == "❎" {
 				bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
+				return
+			}
+			// ok := chats.allowed(uc.From.ID)
+			// ikbsf = tf(ok, 0, len(ikbs)-1)
+			if chats.allowed(uc.From.ID) && Data == "…" {
+				rm := tu.InlineKeyboard(tm.ReplyMarkup.InlineKeyboard[0])
+				if len(tm.ReplyMarkup.InlineKeyboard) == 1 {
+					if ips.count() == 0 {
+						return
+					}
+					rm = tu.InlineKeyboard(tm.ReplyMarkup.InlineKeyboard[0], tu.InlineKeyboardRow(ikbs[:len(ikbs)-1]...))
+				}
+				bot.EditMessageReplyMarkup(&telego.EditMessageReplyMarkupParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID, ReplyMarkup: rm})
+				return
+			}
+			if ips.count() == 0 {
+				return
+			}
+			if strings.HasPrefix(Data, "…") {
+				ips.update(customer{Cmd: strings.TrimPrefix(Data, "…")})
+			} else {
+				ips.write(ip, customer{Cmd: Data})
 			}
 		}, th.AnyCallbackQueryWithMessage())
 		//anyWithIP
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tc, ctm := tmtc(update)
-			ok, ups := allowed(ctm.From.ID, ctm.Chat.ID)
+			ok, ups := allowed(ctm.From.LanguageCode, ctm.From.ID, ctm.Chat.ID)
 			keys, _ := set(reIP.FindAllString(tc, -1))
 			stdo.Println("bh.Handle anyWithIP", keys, ctm)
 			if ok {
@@ -314,9 +386,12 @@ func main() {
 		//AnyCommand
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
-			ok, ups := allowed(tm.From.ID, tm.Chat.ID)
+			ok, ups := allowed(tm.From.LanguageCode, tm.From.ID, tm.Chat.ID)
 			mecs := []tu.MessageEntityCollection{
-				tu.Entity("Ожидался список IP адресов\n"),
+				tu.Entity(dic.add(tm.From.LanguageCode,
+					"en:List of IP addresses expected\n",
+					"ru:Ожидался список IP адресов\n",
+				)),
 				tu.Entity("/127.0.0.1 127.0.0.2 127.0.0.254").Code(),
 				tu.Entity(ups),
 			}
@@ -325,20 +400,28 @@ func main() {
 				mecsf = 0
 			}
 			ikbsf = len(ikbs) - 1
-			if chats.allowed(tm.From.ID) {
+			if chats.allowed(tm.From.ID) && ips.count() > 0 {
 				ikbsf = 0
 			}
 			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 				mecs[mecsf:]...,
 			).WithReplyToMessageID(tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
-		}, th.AnyCommand())
+		}, AnyCommand())
 		//leftChat
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
 			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
-				tu.Entity("Он улетел, но обещал вернуться❗\n    "),
-				tu.Entity("Милый...").Bold(), tu.Entity("😍\n        "),
-				tu.Entity("Милый...").Italic(), tu.Entity("😢"),
+				tu.Entity(dic.add(tm.From.LanguageCode,
+					"en:He flew away, but promised to return❗\n    ",
+					"ru:Он улетел, но обещал вернуться❗\n    ",
+				)),
+				tu.Entity(dic.add(tm.From.LanguageCode,
+					"en:Cute...",
+					"ru:Милый...",
+				)).Bold(), tu.Entity("😍\n        "),
+				tu.Entity(dic.add(tm.From.LanguageCode,
+					"en:Cute...",
+				)).Italic(), tu.Entity("😢"),
 			).WithReplyToMessageID(tm.MessageID))
 		}, leftChat())
 		//newMember
@@ -350,10 +433,18 @@ func main() {
 			for _, nu := range tm.NewChatMembers {
 				stdo.Println(nu.ID)
 				bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
-					tu.Entity("Здорово, селяне!\n"),
-					tu.Entity("Карета готова?\n").Strikethrough(),
-					tu.Entity("Телега готова!🏓"),
-					// tu.Entity("Начните личный чат\n").TextLink("https://t.me/rtk85bot"),
+					tu.Entity(dic.add(tm.From.LanguageCode,
+						"en:Hello villagers!",
+						"ru:Здорово, селяне!\n",
+					)),
+					tu.Entity(dic.add(tm.From.LanguageCode,
+						"en:Is the carriage ready?\n",
+						"ru:Карета готова?\n",
+					)).Strikethrough(),
+					tu.Entity(dic.add(tm.From.LanguageCode,
+						"en:The cart is ready!🏓",
+						"ru:Телега готова!🏓",
+					)),
 				).WithReplyToMessageID(tm.MessageID))
 				return
 			}
@@ -364,11 +455,7 @@ func main() {
 	}
 	stdo.Println("os.Exit(0)")
 }
-func allowed(ChatIDs ...int64) (ok bool, s string) {
-	s = notAllowed(false)
-	if len(ChatIDs) == 0 {
-		return
-	}
+func allowed(key string, ChatIDs ...int64) (ok bool, s string) {
 	s = "\n🏓"
 	for _, v := range ChatIDs {
 		ok = chats.allowed(v)
@@ -376,15 +463,22 @@ func allowed(ChatIDs ...int64) (ok bool, s string) {
 			return
 		}
 	}
-	s = fmt.Sprintf("\nБатюшка не благословляет Вас:%d\n🏓", ChatIDs[0])
+	s = notAllowed(false, ChatIDs[0], key)
 	return
 }
 
-func notAllowed(ok bool) (s string) {
+func notAllowed(ok bool, ChatID int64, key string) (s string) {
 	s = "\n🏓"
 	if ok {
 		return
 	}
-	s = "\nБатюшка не благословляет Вас\n🏓"
+	s = dic.add(key,
+		"en:\nNot allowed for you",
+		"ru:\nБатюшка не благословляет Вас",
+	)
+	if ChatID != 0 {
+		s += fmt.Sprintf(":%d", ChatID)
+	}
+	s += "\n🏓"
 	return
 }

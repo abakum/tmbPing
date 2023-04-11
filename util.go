@@ -10,17 +10,17 @@ func m2kv[K comparable, V any](m map[K]V) (keys []K, vals []V) {
 	return
 }
 
-func in[V comparable](v V, vs []V) bool {
-	if vs == nil {
-		return false
-	}
-	for _, val := range vs {
-		if val == v {
-			return true
-		}
-	}
-	return false
-}
+//	func in[V comparable](v V, vs []V) bool {
+//		if vs == nil {
+//			return false
+//		}
+//		for _, val := range vs {
+//			if val == v {
+//				return true
+//			}
+//		}
+//		return false
+//	}
 func set[V comparable](vs []V) (set []V, m map[V]struct{}) {
 	if vs == nil {
 		return

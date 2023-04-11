@@ -5,14 +5,20 @@ import (
 	"os"
 )
 
+type config struct {
+	M *mss
+	C *customers
+}
+
 func loader() {
 	cus := customers{}
+	conf := config{&dic, &cus}
 	bytes, err := os.ReadFile(tmbPingJson)
 	if err != nil {
 		stdo.Println(err)
 		return
 	}
-	err = json.Unmarshal(bytes, &cus)
+	err = json.Unmarshal(bytes, &conf)
 	if err != nil {
 		stdo.Println(err)
 		return
@@ -27,11 +33,12 @@ func saver() {
 	save = make(cCustomer, 1)
 	saveDone = make(chan bool, 1)
 	cus := customers{}
+	conf := config{&dic, &cus}
 	for {
 		select {
 		case <-saveDone:
 			stdo.Println(cus)
-			bytes, err := json.Marshal(cus)
+			bytes, err := json.Marshal(conf)
 			if err != nil {
 				stdo.Println(err)
 				return

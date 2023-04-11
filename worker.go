@@ -19,13 +19,14 @@ func worker(ip string, ch cCustomer) {
 		select {
 		case <-done:
 			done <- true //done other worker
-			stdo.Println("save", ip)
-			for _, cu := range cus {
+			for i, cu := range cus {
 				cu.Tm = &telego.Message{MessageID: cu.Tm.MessageID, From: &telego.User{ID: cu.Tm.From.ID}, Chat: telego.Chat{ID: cu.Tm.Chat.ID}}
 				cu.Cmd = ip
-				cu.Tm.Text = status
-				cu.Tm.Date = deadline.Unix()
-				//stdo.Println("---Save ", status, deadline)
+				if i == 0 {
+					cu.Tm.From.FirstName = status
+					cu.Tm.Date = deadline.Unix()
+					stdo.Println("saved ", ip, status, deadline)
+				}
 				save <- cu
 			}
 			stdo.Println("done", ip)
@@ -46,6 +47,7 @@ func worker(ip string, ch cCustomer) {
 				default:
 					if cust.Cmd == "❌" || strings.TrimSuffix(cust.Cmd, "❌") == strings.TrimSuffix(status, "⏸️") {
 						for _, cu := range cus {
+							stdo.Println("bot.DeleteMessage", cu)
 							if cu.Reply != nil {
 								bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
 							}
@@ -54,10 +56,10 @@ func worker(ip string, ch cCustomer) {
 					}
 				}
 			} else { //load
-				if cust.Cmd == ip && status == "" {
-					status = cust.Tm.Text
+				if cust.Cmd == ip && cust.Tm.Date > 0 {
+					status = cust.Tm.From.FirstName
 					deadline = time.Unix(cust.Tm.Date, 0)
-					//stdo.Println("---Load ", status, deadline)
+					stdo.Println("loaded ", ip, status, deadline)
 				}
 				cus = append(cus, cust)
 			}
@@ -98,7 +100,7 @@ func worker(ip string, ch cCustomer) {
 					}
 					cus[i].Reply, _ = bot.SendMessage(tu.MessageWithEntities(tu.ID(cu.Tm.Chat.ID),
 						tu.Entity(status),
-						tu.Entity("/"+ip).Code(),
+						tu.Entity(ip).Code(),
 					).WithReplyToMessageID(cu.Tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[:ikbsl]...))))
 				}
 			}

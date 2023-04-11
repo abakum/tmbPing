@@ -2,6 +2,7 @@ package main
 
 import (
 	"regexp"
+	"strings"
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
@@ -34,6 +35,13 @@ func anyWithIP(pattern *regexp.Regexp) th.Predicate {
 		return pattern.MatchString(tc)
 	}
 }
+func AnyCommand() th.Predicate {
+	return func(update telego.Update) bool {
+		_, ctm := tmtc(update)
+		return strings.HasPrefix(ctm.Text, "/") || strings.HasPrefix(ctm.Caption, "/")
+	}
+}
+
 func leftChat() th.Predicate {
 	return func(update telego.Update) bool {
 		return update.Message != nil && update.Message.LeftChatMember != nil

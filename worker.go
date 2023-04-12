@@ -71,6 +71,7 @@ func worker(ip string, ch cCustomer) {
 				tu.InlineKeyboardButton("…").WithCallbackData("…"),
 			}
 			ikbs := append([]telego.InlineKeyboardButton{
+				tu.InlineKeyboardButton("🔂").WithCallbackData("🔂"),
 				tu.InlineKeyboardButton("⏸️").WithCallbackData("⏸️"),
 			}, ikbse...)
 			if time.Now().Before(deadline) {

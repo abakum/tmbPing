@@ -204,9 +204,9 @@ func main() {
 	done = make(chan bool, 10)
 	ips = sCustomer{mcCustomer: mcCustomer{}}
 	defer closer.Close()
-	numFL := "(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])"
-	reIP := regexp.MustCompile(numFL + "(\\.(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){2}\\." + numFL)
-	//	reYYYYMMDD := regexp.MustCompile("([12][0-9][0-9][0-9])(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|30|31)")
+	numFL := `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
+	reIP := regexp.MustCompile(numFL + `(\.(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){2}\.` + numFL)
+	reYYYYMMDD := regexp.MustCompile(`(\p{L}*)\s([12][0-9][0-9][0-9]).?(0[1-9]|1[0-2]).?(0[1-9]|[12][0-9]|30|31)`)
 	deb := false
 	publicURL := "https://localhost"
 	addr := "localhost:443"
@@ -381,8 +381,7 @@ func main() {
 				).WithReplyToMessageID(ctm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
 				return
 			}
-		}, anyWithIP(reIP))
-
+		}, anyWithMatch(reIP))
 		//AnyCommand
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
@@ -450,6 +449,27 @@ func main() {
 			}
 
 		}, newMember())
+		//anyWithYYYYMMDD Easter Egg
+		bh.Handle(func(bot *telego.Bot, update telego.Update) {
+			tc, ctm := tmtc(update)
+			if ctm.From.ID != ctm.Chat.ID {
+				return
+			}
+			//private
+			keys, _ := set(reYYYYMMDD.FindAllString(tc, -1))
+			stdo.Println("bh.Handle anyWithYYYYMMDD", keys, ctm)
+			for _, key := range keys {
+				fss := reYYYYMMDD.FindStringSubmatch(key)
+				bd, err := time.Parse("20060102", strings.Join(fss[2:], ""))
+				if err == nil {
+					entitys := []tu.MessageEntityCollection{tu.Entityf("%s %s\n", fss[1], bd.Format("2006-01-02")).Code()}
+					for _, year := range la(bd) {
+						entitys = append(entitys, tu.Entity(year+"\n"))
+					}
+					bot.SendMessage(tu.MessageWithEntities(tu.ID(ctm.Chat.ID), entitys...).WithReplyToMessageID(ctm.MessageID))
+				}
+			}
+		}, anyWithMatch(reYYYYMMDD))
 		// Start handling updates
 		bh.Start()
 	}

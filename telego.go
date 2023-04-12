@@ -29,7 +29,7 @@ func tmtc(update telego.Update) (tc string, m *telego.Message) {
 	}
 	return
 }
-func anyWithIP(pattern *regexp.Regexp) th.Predicate {
+func anyWithMatch(pattern *regexp.Regexp) th.Predicate {
 	return func(update telego.Update) bool {
 		tc, _ := tmtc(update)
 		return pattern.MatchString(tc)
@@ -41,7 +41,6 @@ func AnyCommand() th.Predicate {
 		return strings.HasPrefix(ctm.Text, "/") || strings.HasPrefix(ctm.Caption, "/")
 	}
 }
-
 func leftChat() th.Predicate {
 	return func(update telego.Update) bool {
 		return update.Message != nil && update.Message.LeftChatMember != nil

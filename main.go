@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -172,6 +173,8 @@ var (
 	tmbPingJson string = "tmbPing.json"
 	ticker      *time.Ticker
 	dic         mss
+	reYYYYMMDD  *regexp.Regexp
+	me          *telego.User
 )
 
 func main() {
@@ -206,7 +209,7 @@ func main() {
 	defer closer.Close()
 	numFL := `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
 	reIP := regexp.MustCompile(numFL + `(\.(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){2}\.` + numFL)
-	reYYYYMMDD := regexp.MustCompile(`(\p{L}*)\s([12][0-9][0-9][0-9]).?(0[1-9]|1[0-2]).?(0[1-9]|[12][0-9]|30|31)`)
+	reYYYYMMDD = regexp.MustCompile(`(\p{L}*)\s([12][0-9][0-9][0-9]).?(0[1-9]|1[0-2]).?(0[1-9]|[12][0-9]|30|31)`)
 	deb := false
 	publicURL := "https://localhost"
 	addr := "localhost:443"
@@ -227,6 +230,11 @@ func main() {
 	// Note: Please keep in mind that default logger may expose sensitive information,
 	// use in development only
 	bot, err = telego.NewBot(token, telego.WithDefaultDebugLogger())
+	if err != nil {
+		stdo.Println(err)
+		closer.Close()
+	}
+	me, err = bot.GetMe()
 	if err != nil {
 		stdo.Println(err)
 		closer.Close()
@@ -386,6 +394,18 @@ func main() {
 		//AnyCommand
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
+			if tm.Chat.Type == "private" {
+				p := "/start "
+				if strings.HasPrefix(tm.Text, p) {
+					ds, err := base64.StdEncoding.DecodeString(strings.Trim(strings.TrimPrefix(tm.Text, p), " "))
+					if err == nil {
+						stdo.Println(string(ds))
+						tm.Text = p + string(ds)
+						easterEgg(bot, update)
+						return
+					}
+				}
+			}
 			ok, ups := allowed(tm.From.LanguageCode, tm.From.ID, tm.Chat.ID)
 			mecs := []tu.MessageEntityCollection{
 				tu.Entity(dic.add(tm.From.LanguageCode,
@@ -451,34 +471,42 @@ func main() {
 
 		}, newMember())
 		//anyWithYYYYMMDD Easter Egg expected "name YYYY.?MM.?DD"
-		bh.Handle(func(bot *telego.Bot, update telego.Update) {
-			tc, ctm := tmtc(update)
-			if ctm.From.ID != ctm.Chat.ID {
-				return
-			}
-			//private
-			keys, _ := set(reYYYYMMDD.FindAllString(tc, -1))
-			stdo.Println("bh.Handle anyWithYYYYMMDD", keys)
-			for _, key := range keys {
-				fss := reYYYYMMDD.FindStringSubmatch(key)
-				bd, err := time.Parse("20060102", strings.Join(fss[2:], ""))
-				if err == nil {
-					entitys := []tu.MessageEntityCollection{tu.Entityf("%s %s\n", fss[1], bd.Format("2006-01-02")).Code()}
-					for _, year := range la(bd) {
-						entitys = append(entitys, tu.Entity(year+"\n"))
-					}
-					if len(entitys) > 1 {
-						entitys[len(entitys)-1] = entitys[len(entitys)-1].Spoiler()
-					}
-					bot.SendMessage(tu.MessageWithEntities(tu.ID(ctm.Chat.ID), entitys...).WithReplyToMessageID(ctm.MessageID))
-				}
-			}
-		}, anyWithMatch(reYYYYMMDD))
+		bh.Handle(easterEgg, anyWithMatch(reYYYYMMDD))
 		// Start handling updates
 		bh.Start()
 	}
 	stdo.Println("os.Exit(0)")
+
 }
+
+func easterEgg(bot *telego.Bot, update telego.Update) {
+	tc, ctm := tmtc(update)
+	if ctm.Chat.Type != "private" {
+		return
+	}
+	keys, _ := set(reYYYYMMDD.FindAllString(tc, -1))
+	stdo.Println("bh.Handle anyWithYYYYMMDD", keys)
+	for _, key := range keys {
+		fss := reYYYYMMDD.FindStringSubmatch(key)
+		bd, err := time.Parse("20060102", strings.Join(fss[2:], ""))
+		if err == nil {
+			nbd := fmt.Sprintf("%s %s", fss[1], bd.Format("2006-01-02"))
+			tl := fmt.Sprintf("t.me/%s?start=%s", me.Username, base64.StdEncoding.EncodeToString([]byte(nbd)))
+			entitys := []tu.MessageEntityCollection{tu.Entity("⚡").TextLink(tl)}
+			entitys = append(entitys, tu.Entity(nbd).Code())
+			entitys = append(entitys, tu.Entity("🔗"+"\n").TextLink("t.me/share/url?url="+tl))
+			le := len(entitys) + 1
+			for _, year := range la(bd) {
+				entitys = append(entitys, tu.Entity(year+"\n"))
+			}
+			if len(entitys) > le {
+				entitys[len(entitys)-1] = entitys[len(entitys)-1].Spoiler()
+			}
+			bot.SendMessage(tu.MessageWithEntities(tu.ID(ctm.Chat.ID), entitys...).WithReplyToMessageID(ctm.MessageID))
+		}
+	}
+}
+
 func allowed(key string, ChatIDs ...int64) (ok bool, s string) {
 	s = "\n🏓"
 	for _, v := range ChatIDs {

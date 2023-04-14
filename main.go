@@ -165,7 +165,7 @@ var (
 	ips         sCustomer
 	bot         *telego.Bot
 	refresh     time.Duration = time.Second * 60
-	dd          time.Duration = time.Hour * 1
+	dd          time.Duration = time.Hour * 8
 	stdo        *log.Logger
 	save        cCustomer
 	saveDone    chan bool
@@ -313,6 +313,7 @@ func main() {
 			tu.InlineKeyboardButton("🔁").WithCallbackData("…🔁"),
 			tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
 			tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
+			tu.InlineKeyboardButton("⏸️❌").WithCallbackData("…⏸️❌"),
 			tu.InlineKeyboardButton("✅❌").WithCallbackData("…✅❌"),
 			tu.InlineKeyboardButton("⁉️❌").WithCallbackData("…⁉️❌"),
 			tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
@@ -449,7 +450,7 @@ func main() {
 			}
 
 		}, newMember())
-		//anyWithYYYYMMDD Easter Egg
+		//anyWithYYYYMMDD Easter Egg expected "name YYYY.?MM.?DD"
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tc, ctm := tmtc(update)
 			if ctm.From.ID != ctm.Chat.ID {
@@ -457,7 +458,7 @@ func main() {
 			}
 			//private
 			keys, _ := set(reYYYYMMDD.FindAllString(tc, -1))
-			stdo.Println("bh.Handle anyWithYYYYMMDD", keys, ctm)
+			stdo.Println("bh.Handle anyWithYYYYMMDD", keys)
 			for _, key := range keys {
 				fss := reYYYYMMDD.FindStringSubmatch(key)
 				bd, err := time.Parse("20060102", strings.Join(fss[2:], ""))
@@ -465,6 +466,9 @@ func main() {
 					entitys := []tu.MessageEntityCollection{tu.Entityf("%s %s\n", fss[1], bd.Format("2006-01-02")).Code()}
 					for _, year := range la(bd) {
 						entitys = append(entitys, tu.Entity(year+"\n"))
+					}
+					if len(entitys) > 1 {
+						entitys[len(entitys)-1] = entitys[len(entitys)-1].Spoiler()
 					}
 					bot.SendMessage(tu.MessageWithEntities(tu.ID(ctm.Chat.ID), entitys...).WithReplyToMessageID(ctm.MessageID))
 				}

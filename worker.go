@@ -45,14 +45,17 @@ func worker(ip string, ch cCustomer) {
 				case "🔂":
 					deadline = time.Now().Add(refresh)
 				default:
-					if cust.Cmd == "❌" || strings.TrimSuffix(cust.Cmd, "❌") == strings.TrimSuffix(status, "⏸️") {
-						for _, cu := range cus {
-							stdo.Println("bot.DeleteMessage", cu)
-							if cu.Reply != nil {
-								bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
+					if strings.HasSuffix(cust.Cmd, "❌") {
+						tsX := strings.TrimSuffix(cust.Cmd, "❌") // empty|pause|connect|disconnect
+						if tsX == "" || strings.HasSuffix(status, tsX) || strings.HasPrefix(status, tsX) {
+							for _, cu := range cus {
+								stdo.Println("bot.DeleteMessage", cu)
+								if cu.Reply != nil {
+									bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
+								}
 							}
+							return
 						}
-						return
 					}
 				}
 			} else { //load

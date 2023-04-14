@@ -13,7 +13,8 @@ func la(t time.Time) (years []string) {
 	z0 := moonZodiac(t)
 	f := time.Now().Year() - t.Year()
 	years = append(years, fmt.Sprintf("%d %s%s%s", t.Year(), w0, p0, z0))
-	for i := 1; len(years) < 12; i++ {
+	fc := 0
+	for i := 1; fc < 1; i++ {
 		bd := t.AddDate(i, 0, 0)
 		c := 0
 		w := wd(bd)
@@ -36,6 +37,9 @@ func la(t time.Time) (years []string) {
 		}
 		if i > f && c > 0 || c > 1 {
 			years = append(years, fmt.Sprintf("%d %s%s%s", bd.Year(), w, p, z))
+			if i > f && c > 0 {
+				fc++
+			}
 		}
 	}
 	return
@@ -50,7 +54,10 @@ func leapGregorian(year int) bool {
 		(!(((year % 100) == 0) && ((year % 400) != 0)))
 }
 
-func gregorianToJd(year, month, day float64) float64 {
+const lunarMonthDay float64 = 29.530588853
+const gregorianEpoch = 1721425.5
+
+func jDaP(year, month, day float64) (julianDays, agePart float64) {
 	l := -2.0
 	if leapGregorian(int(year)) {
 		l = -1.0
@@ -58,14 +65,16 @@ func gregorianToJd(year, month, day float64) float64 {
 	if month <= 2.0 {
 		l = 0.0
 	}
-	return (1721425.5 - 1.0) +
+	julianDays = (gregorianEpoch - 1.0) +
 		(365.0 * (year - 1.0)) +
 		math.Floor((year-1.0)/4.0) +
 		(-math.Floor((year - 1.0) / 100.0)) +
 		math.Floor((year-1.0)/400.0) +
-		math.Floor((((367.0*month)-362.0)/12.0)+
-			l+day)
+		math.Floor((((367.0*month)-362.0)/12.0)+l+day)
+	agePart = normalize((julianDays - 2451550.1) / lunarMonthDay)
+	return
 }
+
 func normalize(v float64) float64 {
 	w := v - math.Floor(v)
 	if w < 0 {
@@ -74,65 +83,67 @@ func normalize(v float64) float64 {
 	return w
 }
 
-func moonPhase(grig time.Time) string {
+func moonPhase(t time.Time) string {
+	//https://planetcalc.ru/524/
+	//https://planetcalc.ru/personal/source/?id=522
 	//https://gist.github.com/mrrrk/e100225508ad8b6882844de99d264ca7
-	ageDays := normalize((gregorianToJd(float64(grig.Year()), float64(grig.Month()+1.0), float64(grig.Day()))-2451550.1)/lunarMonthDay) * lunarMonthDay
+	_, agePart := jDaP(float64(t.Year()), float64(t.Month())+1.0, float64(t.Day()))
+	ageDays := agePart * lunarMonthDay
 	switch {
 	case ageDays < 1.84566:
-		return "🌑"
+		return "🌑" //"NEW"
 	case ageDays < 5.53699:
-		return "🌒"
+		return "🌒" //"Waxing crescent"
 	case ageDays < 9.22831:
-		return "🌓"
+		return "🌓" //"First quarter"
 	case ageDays < 12.91963:
-		return "🌔"
+		return "🌔" //"Waxing gibbous"
 	case ageDays < 16.61096:
-		return "🌕"
+		return "🌕" //"FULL"
 	case ageDays < 20.30228:
-		return "🌖"
+		return "🌖" //"Waning gibbous"
 	case ageDays < 23.99361:
-		return "🌗"
+		return "🌗" //"Last quarter"
 	case ageDays < 27.68493:
-		return "🌘"
+		return "🌘" //"Waning crescent"
 	default:
-		return "🌑"
+		return "🌑" //"NEW"
 	}
 }
 
-const lunarMonthDay float64 = 29.530588853
-
-func moonZodiac(grig time.Time) (zodiac string) {
-	julianDays := gregorianToJd(float64(grig.Year()), float64(grig.Month()+1.0), float64(grig.Day()))
-	IP := 4 * math.Pi * normalize((julianDays-2451550.1)/lunarMonthDay)
+func moonZodiac(t time.Time) (zodiac string) {
+	//https://web.archive.org/web/20090218203728/http://home.att.net/~srschmitt/lunarphasecalc.html Стефан Шмитт (Stephen R. Schmitt)
+	julianDays, agePart := jDaP(float64(t.Year()), float64(t.Month())+1.0, float64(t.Day()))
+	IP2 := 4 * math.Pi * agePart
 	DP := 2 * math.Pi * normalize((julianDays-2451562.2)/27.55454988)
 	RP := normalize((julianDays - 2451555.8) / 27.321582241)
-	LO := 360*RP + 6.3*math.Sin(DP) + 1.3*math.Sin(IP-DP) + 0.7*math.Sin(IP)
+	LO := 360*RP + 6.3*math.Sin(DP) + 1.3*math.Sin(IP2-DP) + 0.7*math.Sin(IP2) //Moon's ecliptic longitude
 	switch {
 	case LO < 33.18:
-		return "♓︎"
+		return "♓︎" //"Pisces"
 	case LO < 51.16:
-		return "♈︎"
+		return "♈︎" //"Aries"
 	case LO < 93.44:
-		return "♉︎"
+		return "♉︎" //"Taurus"
 	case LO < 119.48:
-		return "♊︎"
+		return "♊︎" //"Gemini"
 	case LO < 135.30:
-		return "♋︎"
+		return "♋︎" //"Cancer"
 	case LO < 173.34:
-		return "♌︎"
+		return "♌︎" //"Leo"
 	case LO < 224.17:
-		return "♍︎"
+		return "♍︎" //"Virgo"
 	case LO < 242.57:
-		return "♎︎"
+		return "♎︎" //"Libra"
 	case LO < 271.26:
-		return "♏︎"
+		return "♏︎" //"Scorpio"
 	case LO < 302.49:
-		return "♐︎"
+		return "♐︎" //"Sagittarius"
 	case LO < 311.72:
-		return "♑︎"
+		return "♑︎" //"Capricorn"
 	case LO < 348.58:
-		return "♒︎"
+		return "♒︎" //"Aquarius"
 	default:
-		return "♓︎"
+		return "♓︎" //"Pisces"
 	}
 }

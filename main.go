@@ -313,10 +313,10 @@ func main() {
 			tu.InlineKeyboardButton("🔁").WithCallbackData("…🔁"),
 			tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
 			tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
-			tu.InlineKeyboardButton("⏸️❌").WithCallbackData("…⏸️❌"),
-			tu.InlineKeyboardButton("✅❌").WithCallbackData("…✅❌"),
-			tu.InlineKeyboardButton("⁉️❌").WithCallbackData("…⁉️❌"),
 			tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
+			tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
+			tu.InlineKeyboardButton("✅").WithCallbackData("…✅❌"),
+			tu.InlineKeyboardButton("⁉️").WithCallbackData("…⁉️❌"),
 			tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
 		}
 		var ikbsf int

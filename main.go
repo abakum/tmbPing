@@ -488,7 +488,7 @@ func easterEgg(bot *telego.Bot, update telego.Update) {
 	stdo.Println("bh.Handle anyWithYYYYMMDD", keys)
 	for _, key := range keys {
 		fss := reYYYYMMDD.FindStringSubmatch(key)
-		bd, err := time.Parse("20060102", strings.Join(fss[2:], ""))
+		bd, err := time.ParseInLocation("20060102150405", strings.Join(fss[2:], "")+"120000", time.Local)
 		if err == nil {
 			nbd := fmt.Sprintf("%s %s", fss[1], bd.Format("2006-01-02"))
 			tl := fmt.Sprintf("t.me/%s?start=%s", me.Username, base64.StdEncoding.EncodeToString([]byte(nbd)))

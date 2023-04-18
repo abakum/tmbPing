@@ -76,10 +76,6 @@ func worker(ip string, ch cCustomer) {
 				tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
 				tu.InlineKeyboardButton("…").WithCallbackData("…"),
 			}
-			// ikbs := append([]telego.InlineKeyboardButton{
-			// 	tu.InlineKeyboardButton("🔂").WithCallbackData("🔂"),
-			// 	tu.InlineKeyboardButton("⏸️").WithCallbackData("⏸️"),
-			// }, ikbse...)
 			if time.Now().Before(deadline) {
 				status, err = ping(ip)
 				if err != nil {
@@ -90,10 +86,6 @@ func worker(ip string, ch cCustomer) {
 				if !strings.HasSuffix(status, "⏸️") {
 					status += "⏸️"
 				}
-				// ikbs = append([]telego.InlineKeyboardButton{
-				// 	tu.InlineKeyboardButton("🔁").WithCallbackData("🔁"),
-				// 	tu.InlineKeyboardButton("🔂").WithCallbackData("🔂"),
-				// }, ikbse...)
 			}
 			for i, cu := range cus {
 				stdo.Println(i, cu, status, oStatus)

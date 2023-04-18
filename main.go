@@ -175,12 +175,14 @@ var (
 	dic         mss
 	reYYYYMMDD  *regexp.Regexp
 	me          *telego.User
+	ul          string
 )
 
 func main() {
+	var err error
 	dic = mss{}
 	stdo = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
-	ul, err := jibber_jabber.DetectLanguage()
+	ul, err = jibber_jabber.DetectLanguage()
 	if err != nil {
 		ul = "ru"
 	}
@@ -341,7 +343,7 @@ func main() {
 			if strings.HasPrefix(Data, "…") {
 				ip = ""
 			}
-			ups := fmt.Sprintf("%s %s @%s #%d%s", uc.From.FirstName, uc.From.LastName, uc.From.Username, uc.From.ID, notAllowed(my, 0, tm.From.LanguageCode))
+			ups := fmt.Sprintf("%s %s @%s #%d%s", uc.From.FirstName, uc.From.LastName, uc.From.Username, uc.From.ID, notAllowed(my, 0, ul)) //tm.From.LanguageCode
 			bot.AnswerCallbackQuery(&telego.AnswerCallbackQueryParams{CallbackQueryID: update.CallbackQuery.ID, Text: ups + tf(ips.count() == 0, "∅", ip+Data), ShowAlert: !my})
 			if !my {
 				return
@@ -350,8 +352,6 @@ func main() {
 				bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
 				return
 			}
-			// ok := chats.allowed(uc.From.ID)
-			// ikbsf = tf(ok, 0, len(ikbs)-1)
 			if chats.allowed(uc.From.ID) && Data == "…" {
 				rm := tu.InlineKeyboard(tm.ReplyMarkup.InlineKeyboard[0])
 				if len(tm.ReplyMarkup.InlineKeyboard) == 1 {
@@ -406,9 +406,9 @@ func main() {
 					}
 				}
 			}
-			ok, ups := allowed(tm.From.LanguageCode, tm.From.ID, tm.Chat.ID)
+			ok, ups := allowed(ul, tm.From.ID, tm.Chat.ID)
 			mecs := []tu.MessageEntityCollection{
-				tu.Entity(dic.add(tm.From.LanguageCode,
+				tu.Entity(dic.add(ul,
 					"en:List of IP addresses expected\n",
 					"ru:Ожидался список IP адресов\n",
 				)),
@@ -431,15 +431,15 @@ func main() {
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
 			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
-				tu.Entity(dic.add(tm.From.LanguageCode,
+				tu.Entity(dic.add(ul,
 					"en:He flew away, but promised to return❗\n    ",
 					"ru:Он улетел, но обещал вернуться❗\n    ",
 				)),
-				tu.Entity(dic.add(tm.From.LanguageCode,
+				tu.Entity(dic.add(ul,
 					"en:Cute...",
 					"ru:Милый...",
 				)).Bold(), tu.Entity("😍\n        "),
-				tu.Entity(dic.add(tm.From.LanguageCode,
+				tu.Entity(dic.add(ul,
 					"en:Cute...",
 				)).Italic(), tu.Entity("😢"),
 			).WithReplyToMessageID(tm.MessageID))
@@ -453,15 +453,15 @@ func main() {
 			for _, nu := range tm.NewChatMembers {
 				stdo.Println(nu.ID)
 				bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
-					tu.Entity(dic.add(tm.From.LanguageCode,
+					tu.Entity(dic.add(ul,
 						"en:Hello villagers!",
 						"ru:Здорово, селяне!\n",
 					)),
-					tu.Entity(dic.add(tm.From.LanguageCode,
+					tu.Entity(dic.add(ul,
 						"en:Is the carriage ready?\n",
 						"ru:Карета готова?\n",
 					)).Strikethrough(),
-					tu.Entity(dic.add(tm.From.LanguageCode,
+					tu.Entity(dic.add(ul,
 						"en:The cart is ready!🏓",
 						"ru:Телега готова!🏓",
 					)),

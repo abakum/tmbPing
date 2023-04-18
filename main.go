@@ -94,6 +94,13 @@ func (s *sCustomer) write(ip string, c customer) {
 		s.add(ip) <- c
 	}
 }
+func (s *sCustomer) read(ip string) (ok bool) {
+	stdo.Println("sCustomer.read ", ip)
+	s.RLock()
+	defer s.RUnlock()
+	_, ok = s.mcCustomer[ip]
+	return
+}
 
 func (s *sCustomer) update(c customer) {
 	s.RLock()
@@ -174,8 +181,11 @@ var (
 	ticker      *time.Ticker
 	dic         mss
 	reYYYYMMDD  *regexp.Regexp
+	reIP        *regexp.Regexp
 	me          *telego.User
 	ul          string
+	ikbs        []telego.InlineKeyboardButton
+	ikbsf       int
 )
 
 func main() {
@@ -210,7 +220,7 @@ func main() {
 	ips = sCustomer{mcCustomer: mcCustomer{}}
 	defer closer.Close()
 	numFL := `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
-	reIP := regexp.MustCompile(numFL + `(\.(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){2}\.` + numFL)
+	reIP = regexp.MustCompile(numFL + `(\.(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){2}\.` + numFL)
 	reYYYYMMDD = regexp.MustCompile(`(\p{L}*)\s([12][0-9][0-9][0-9]).?(0[1-9]|1[0-2]).?(0[1-9]|[12][0-9]|30|31)`)
 	deb := false
 	publicURL := "https://localhost"
@@ -261,6 +271,16 @@ func main() {
 
 	_ = manInTheMiddle(bot)
 
+	ikbs = []telego.InlineKeyboardButton{
+		tu.InlineKeyboardButton("🔁").WithCallbackData("…🔁"),
+		tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
+		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
+		tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
+		tu.InlineKeyboardButton("✅").WithCallbackData("…✅❌"),
+		tu.InlineKeyboardButton("⁉️").WithCallbackData("…⁉️❌"),
+		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
+		tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
+	}
 	// Get an update channel from webhook.
 	// (more on configuration in examples/updates_webhook/main.go)
 	updates, _ := bot.UpdatesViaWebhook(endPoint)
@@ -319,17 +339,6 @@ func main() {
 			bh.Stop()
 			stdo.Println("closer bh.Stop")
 		})
-		ikbs := []telego.InlineKeyboardButton{
-			tu.InlineKeyboardButton("🔁").WithCallbackData("…🔁"),
-			tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
-			tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
-			tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
-			tu.InlineKeyboardButton("✅").WithCallbackData("…✅❌"),
-			tu.InlineKeyboardButton("⁉️").WithCallbackData("…⁉️❌"),
-			tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
-			tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
-		}
-		var ikbsf int
 		//AnyCallbackQueryWithMessage
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			uc := update.CallbackQuery
@@ -352,7 +361,7 @@ func main() {
 				bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
 				return
 			}
-			if chats.allowed(uc.From.ID) && Data == "…" {
+			if Data == "…" { //chats.allowed(uc.From.ID) &&
 				rm := tu.InlineKeyboard(tm.ReplyMarkup.InlineKeyboard[0])
 				if len(tm.ReplyMarkup.InlineKeyboard) == 1 {
 					if ips.count() == 0 {
@@ -373,24 +382,7 @@ func main() {
 			}
 		}, th.AnyCallbackQueryWithMessage())
 		//anyWithIP
-		bh.Handle(func(bot *telego.Bot, update telego.Update) {
-			tc, ctm := tmtc(update)
-			ok, ups := allowed(ctm.From.LanguageCode, ctm.From.ID, ctm.Chat.ID)
-			keys, _ := set(reIP.FindAllString(tc, -1))
-			stdo.Println("bh.Handle anyWithIP", keys, ctm)
-			if ok {
-				for _, ip := range keys {
-					ips.write(ip, customer{Tm: ctm})
-				}
-			} else {
-				ikbsf = len(ikbs) - 1
-				bot.SendMessage(tu.MessageWithEntities(tu.ID(ctm.Chat.ID),
-					tu.Entity("/"+strings.Join(keys, " ")).Code(),
-					tu.Entity(ups),
-				).WithReplyToMessageID(ctm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
-				return
-			}
-		}, anyWithMatch(reIP))
+		bh.Handle(backDoor, anyWithMatch(reIP))
 		//AnyCommand
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
@@ -401,7 +393,12 @@ func main() {
 					if err == nil {
 						stdo.Println(string(ds))
 						tm.Text = p + string(ds)
-						easterEgg(bot, update)
+						switch {
+						case reYYYYMMDD.MatchString(tm.Text):
+							easterEgg(bot, update)
+						case reIP.MatchString(tm.Text):
+							backDoor(bot, update)
+						}
 						return
 					}
 				}
@@ -478,6 +475,38 @@ func main() {
 	stdo.Println("os.Exit(0)")
 
 }
+func start(me *telego.User, s string) string {
+	return fmt.Sprintf("t.me/%s?start=%s", me.Username, base64.StdEncoding.EncodeToString([]byte(s)))
+}
+
+func backDoor(bot *telego.Bot, update telego.Update) {
+	tc, ctm := tmtc(update)
+	ok, ups := allowed(ul, ctm.From.ID, ctm.Chat.ID)
+	keys, _ := set(reIP.FindAllString(tc, -1))
+	stdo.Println("bh.Handle anyWithIP", keys, ctm)
+	if ok {
+		for _, ip := range keys {
+			ips.write(ip, customer{Tm: ctm})
+		}
+	} else {
+		ikbsf = len(ikbs) - 1
+		news := ""
+		for _, ip := range keys {
+			if ips.read(ip) {
+				ips.write(ip, customer{Tm: ctm})
+			} else {
+				news += ip + " "
+			}
+		}
+		if len(news) > 1 {
+			bot.SendMessage(tu.MessageWithEntities(tu.ID(ctm.Chat.ID),
+				tu.Entity("/"+strings.TrimRight(news, " ")).Code(),
+				tu.Entity(ups),
+			).WithReplyToMessageID(ctm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
+		}
+		return
+	}
+}
 
 func easterEgg(bot *telego.Bot, update telego.Update) {
 	tc, ctm := tmtc(update)
@@ -491,7 +520,7 @@ func easterEgg(bot *telego.Bot, update telego.Update) {
 		bd, err := time.ParseInLocation("20060102150405", strings.Join(fss[2:], "")+"120000", time.Local)
 		if err == nil {
 			nbd := fmt.Sprintf("%s %s", fss[1], bd.Format("2006-01-02"))
-			tl := fmt.Sprintf("t.me/%s?start=%s", me.Username, base64.StdEncoding.EncodeToString([]byte(nbd)))
+			tl := start(me, nbd)
 			entitys := []tu.MessageEntityCollection{tu.Entity("⚡").TextLink(tl)}
 			entitys = append(entitys, tu.Entity(nbd).Code())
 			entitys = append(entitys, tu.Entity("🔗"+"\n").TextLink("t.me/share/url?url="+tl))

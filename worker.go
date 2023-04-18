@@ -12,6 +12,7 @@ func worker(ip string, ch cCustomer) {
 	// var buttons *telego.InlineKeyboardMarkup
 	var err error
 	status := ""
+	tl := start(me, ip)
 	deadline := time.Now().Add(dd)
 	cus := customers{}
 	defer ips.del(ip, false)
@@ -73,8 +74,8 @@ func worker(ip string, ch cCustomer) {
 				tu.InlineKeyboardButton("🔂").WithCallbackData("🔂"),
 				tu.InlineKeyboardButton("⏸️").WithCallbackData("⏸️"),
 				tu.InlineKeyboardButton("❌").WithCallbackData("❌"),
-				tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
 				tu.InlineKeyboardButton("…").WithCallbackData("…"),
+				tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
 			}
 			if time.Now().Before(deadline) {
 				status, err = ping(ip)
@@ -94,14 +95,19 @@ func worker(ip string, ch cCustomer) {
 					if cu.Reply != nil {
 						bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
 					}
-					ikbsl := len(ikbs) - 1
-					if chats.allowed(cu.Tm.From.ID) {
-						ikbsl++
+					ikbsf := 0
+					if !chats.allowed(tf(cu.Tm.Chat.Type == "private", cu.Tm.From.ID, cu.Tm.Chat.ID)) {
+						ikbsf = len(ikbs) - 1
 					}
+					//ikbsl := len(ikbs) - 1
+					//if chats.allowed(cu.Tm.From.ID) {
+					//	ikbsl++
+					//}
 					cus[i].Reply, _ = bot.SendMessage(tu.MessageWithEntities(tu.ID(cu.Tm.Chat.ID),
 						tu.Entity(status),
 						tu.Entity(ip).Code(),
-					).WithReplyToMessageID(cu.Tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[:ikbsl]...))))
+						tu.Entity("⚡").TextLink(tl),
+					).WithReplyToMessageID(cu.Tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
 				}
 			}
 		}

@@ -47,7 +47,7 @@ func worker(ip string, ch cCustomer) {
 				default:
 					if strings.HasSuffix(cust.Cmd, "❌") {
 						tsX := strings.TrimSuffix(cust.Cmd, "❌") // empty|pause|connect|disconnect
-						if tsX == "" || strings.HasSuffix(status, tsX) || strings.HasPrefix(status, tsX) {
+						if tsX == "" || strings.HasSuffix(status, tsX) || strings.HasPrefix(status, tsX) || (strings.HasPrefix(status, "❗") && tsX == "⁉️") {
 							for _, cu := range cus {
 								stdo.Println("bot.DeleteMessage", cu)
 								if cu.Reply != nil {
@@ -79,8 +79,9 @@ func worker(ip string, ch cCustomer) {
 			if time.Now().Before(deadline) {
 				status, err = ping(ip)
 				if err != nil {
+					status = "⁉️"
 					stdo.Println("ping", ip, err)
-					return
+					//return
 				}
 			} else {
 				if !strings.HasSuffix(status, "⏸️") {

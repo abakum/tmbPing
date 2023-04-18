@@ -14,7 +14,7 @@ require (
 )
 
 require (
-	github.com/abakum/MoonPhase v0.0.0-20230416165650-9c93af9eb3da
+	github.com/abakum/MoonPhase v0.0.0-20230418083244-4ff0a28b9a7d
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21
 	github.com/fasthttp/router v1.4.18 // indirect

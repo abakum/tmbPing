@@ -14,7 +14,7 @@ func la(t time.Time) (years []string) {
 	p0 := m0.PhaseNameLocale("")
 	ph := strings.Replace(strings.ToLower(m0.PhaseNameLocale("ru")), " ", "_", -1)
 	z0 := m0.ZodiacSignLocale("")
-	zh := m0.ZodiacSignLocale("ru")
+	zh := m0.ZodiacSignLocale(ul)
 	f := time.Now().Year() - t.Year()
 	years = append(years, fmt.Sprintf("#%s\n#%s\n#%s\n%d %s%s%s", wh, ph, zh, t.Year(), w0, p0, z0))
 	fc := 0

@@ -324,9 +324,9 @@ func main() {
 			tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
 			tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
 			tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
-			tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
 			tu.InlineKeyboardButton("✅").WithCallbackData("…✅❌"),
 			tu.InlineKeyboardButton("⁉️").WithCallbackData("…⁉️❌"),
+			tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
 			tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
 		}
 		var ikbsf int
@@ -334,8 +334,8 @@ func main() {
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			uc := update.CallbackQuery
 			tm := uc.Message
-			my := uc.From.ID == tm.Chat.ID
-			if tm.ReplyToMessage != nil {
+			my := true
+			if tm.Chat.Type != "private" && tm.ReplyToMessage != nil {
 				my = uc.From.ID == tm.ReplyToMessage.From.ID
 			}
 			ip := reIP.FindString(tm.Text)

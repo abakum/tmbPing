@@ -26,7 +26,7 @@ func ping(ip string) (status string, err error) {
 		status = "✅"
 		stdo.Printf("%v echoReply %d<rtt~%d<%d\n", ip, stats.MinRtt.Milliseconds(), stats.AvgRtt.Milliseconds(), stats.MaxRtt.Milliseconds())
 	} else {
-		status = "⁉️" //❗
+		status = "❗"
 		stdo.Printf("%v %d/%d packets received\n", ip, stats.PacketsRecv, pinger.Count)
 	}
 	return

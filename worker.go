@@ -90,7 +90,7 @@ func worker(ip string, ch cCustomer) {
 				}
 			}
 			for i, cu := range cus {
-				stdo.Println(i, cu, status, oStatus)
+				stdo.Println(i, fcRfRc(cu.Tm), ip, fcRfRc(cu.Reply), status, oStatus)
 				if cu.Reply == nil || status != oStatus {
 					if cu.Reply != nil {
 						bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})

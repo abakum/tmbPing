@@ -16,7 +16,7 @@ func la(t time.Time) (years []string) {
 	z0 := m0.ZodiacSignLocale("")
 	zh := m0.ZodiacSignLocale(ul)
 	f := time.Now().Year() - t.Year()
-	years = append(years, fmt.Sprintf("#%s\n#%s\n#%s\n%d %s%s%s", wh, ph, zh, t.Year(), w0, p0, z0))
+	years = append(years, fmt.Sprintf("#%s\n#%s\n#%s\n#%dг %s%s%s", wh, ph, zh, t.Year(), w0, p0, z0))
 	fc := 0
 	for i := 1; fc < 1; i++ {
 		bd := t.AddDate(i, 0, 0)
@@ -26,13 +26,13 @@ func la(t time.Time) (years []string) {
 		if w0 == w {
 			c++
 		} else {
-			w = "\u2003\u2004"
+			w = "\u2003\u2006" // "\u2003\u2004"
 		}
 		p := m.PhaseNameLocale("")
 		if p0 == p {
 			c++
 		} else {
-			p = "\u2003\u2004"
+			p = "\u2003\u2006" //"\u2003\u2004"
 		}
 		z := m.ZodiacSignLocale("")
 		if z0 == z {
@@ -41,7 +41,7 @@ func la(t time.Time) (years []string) {
 			z = ""
 		}
 		if i > f && c > 0 || c > 1 && i < 90 {
-			years = append(years, fmt.Sprintf("%d %s%s%s", bd.Year(), w, p, z))
+			years = append(years, fmt.Sprintf("#%dг %s%s%s", bd.Year(), w, p, z))
 			if i > f && c > 0 {
 				fc++
 			}

@@ -526,6 +526,11 @@ func easterEgg(bot *telego.Bot, update telego.Update) {
 			entitys = append(entitys, tu.Entity("🔗"+"\n").TextLink("t.me/share/url?url="+tl))
 			le := len(entitys) + 1
 			for _, year := range la(bd) {
+				// b, a, ok := strings.Cut(year, " ")
+				// entitys = append(entitys, tu.Entity(b).Hashtag())
+				// if ok {
+				// 	entitys = append(entitys, tu.Entityf(" n%s\n", a))
+				// }
 				entitys = append(entitys, tu.Entity(year+"\n"))
 			}
 			if len(entitys) > le {
@@ -561,5 +566,18 @@ func notAllowed(ok bool, ChatID int64, key string) (s string) {
 		s += fmt.Sprintf(":%d", ChatID)
 	}
 	s += "\n🏓"
+	return
+}
+
+func fcRfRc(tm *telego.Message) (s string) {
+	s = ""
+	if tm == nil {
+		return
+	}
+	s = fmt.Sprintf("From:@%s #%d Chat:@%s #%d", tm.From.Username, tm.From.ID, tm.Chat.Title, tm.Chat.ID)
+	if tm.ReplyToMessage == nil {
+		return
+	}
+	s = fmt.Sprintf(" Reply From:@%s #%d Reply Chat:@%s #%d", tm.ReplyToMessage.From.Username, tm.ReplyToMessage.From.ID, tm.ReplyToMessage.Chat.Title, tm.ReplyToMessage.Chat.ID)
 	return
 }

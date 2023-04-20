@@ -194,7 +194,7 @@ func main() {
 	stdo = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
 	ul, err = jibber_jabber.DetectLanguage()
 	if err != nil {
-		ul = "ru"
+		ul = "en"
 	}
 	chats = os.Args[1:]
 	if len(chats) == 0 {

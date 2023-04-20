@@ -5,6 +5,7 @@ go 1.20
 require github.com/mymmrac/telego v0.22.1-0.20230414150931-371458b80d17
 
 require (
+	github.com/abakum/gozodiac v0.0.0-20230420074711-aeb1c3b09e25 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/janczer/MoonPhase v0.0.0-20180923202141-974fa6e01c48 // indirect
 	github.com/janczer/goMoonPhase v0.0.0-20210411203237-6c61017953a8 // indirect
@@ -14,7 +15,7 @@ require (
 )
 
 require (
-	github.com/abakum/MoonPhase v0.0.0-20230418083244-4ff0a28b9a7d
+	github.com/abakum/MoonPhase v0.0.0-20230420072252-6fe105d76a8e
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/cloudfoundry/jibber_jabber v0.0.0-20151120183258-bcc4c8345a21
 	github.com/fasthttp/router v1.4.18 // indirect

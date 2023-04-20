@@ -4,6 +4,10 @@ github.com/abakum/MoonPhase v0.0.0-20230416165650-9c93af9eb3da h1:9qaWF25Mcf5FG8
 github.com/abakum/MoonPhase v0.0.0-20230416165650-9c93af9eb3da/go.mod h1:oeu6zh7iIf7fieQ12mwe7p1KxwpTnQPyw01JE7JrSA0=
 github.com/abakum/MoonPhase v0.0.0-20230418083244-4ff0a28b9a7d h1:enXmx8mJNyOdC3kqVMD4gAtrw571RR9uX95ByXz/w+M=
 github.com/abakum/MoonPhase v0.0.0-20230418083244-4ff0a28b9a7d/go.mod h1:oeu6zh7iIf7fieQ12mwe7p1KxwpTnQPyw01JE7JrSA0=
+github.com/abakum/MoonPhase v0.0.0-20230420072252-6fe105d76a8e h1:sypf5aqACLVSLhwjo8t3BNWaqcN3xhYr0fbeS/FrJTs=
+github.com/abakum/MoonPhase v0.0.0-20230420072252-6fe105d76a8e/go.mod h1:oeu6zh7iIf7fieQ12mwe7p1KxwpTnQPyw01JE7JrSA0=
+github.com/abakum/gozodiac v0.0.0-20230420074711-aeb1c3b09e25 h1:tvLQu1tI8lx1mixuRsv9n88VtRi9HixFd9rY1dp6SlA=
+github.com/abakum/gozodiac v0.0.0-20230420074711-aeb1c3b09e25/go.mod h1:bdnSVcc5g8Lkalefs6IrMIEoNggBx/1EwQNOpEStQ/Y=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/cCs=

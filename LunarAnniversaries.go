@@ -95,7 +95,7 @@ func wdLocale(t time.Time, iso639_1 string) (icon string, s string) {
 	}
 	isoWeekday := int(t.Weekday())
 	names, ok := msIi[iso639_1]
-	if !ok || iso639_1 == "en" {
+	if !ok { //en
 		s = t.Weekday().String()
 	} else {
 		if isoWeekday == 0 && names.iso {
@@ -108,12 +108,11 @@ func wdLocale(t time.Time, iso639_1 string) (icon string, s string) {
 }
 func yearLocale(iso639_1 string) (s string) {
 	msS := map[string]string{
-		"en": "y",
 		"ru": "г",
 	}
 	s, ok := msS[iso639_1]
-	if !ok {
-		s = msS["en"]
+	if !ok { //en
+		s = "y"
 	}
 	return
 }

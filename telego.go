@@ -18,11 +18,9 @@ func tmtc(update telego.Update) (tc string, m *telego.Message) {
 			m = tm
 			tc += tm.Text + " "
 			tc += tm.Caption + " "
-			tm = tm.ReplyToMessage
-			if tm != nil {
-				//m = tm
-				tc += tm.Text + " "
-				tc += tm.Caption + " "
+			if tm.ReplyToMessage != nil {
+				tc += tm.ReplyToMessage.Text + " "
+				tc += tm.ReplyToMessage.Caption + " "
 			}
 			break
 		}

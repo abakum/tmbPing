@@ -423,6 +423,15 @@ func main() {
 			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 				mecs[mecsf:]...,
 			).WithReplyToMessageID(tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
+			// bot.SendMessage(tu.Message(tu.ID(tm.Chat.ID),
+			// 	"😅* test *🌗",
+			// ).WithParseMode("MarkdownV2"))
+			// bot.SendMessage(tu.Message(tu.ID(tm.Chat.ID),
+			// 	"😅<b> test </b>🌗",
+			// ).WithParseMode("HTML"))
+			// bot.SendMessage(tu.Message(tu.ID(tm.Chat.ID),
+			// 	"a* test *_b_",
+			// ).WithParseMode("MarkdownV2"))
 		}, AnyCommand())
 		//leftChat
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {

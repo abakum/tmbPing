@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/abakum/gozodiac v0.0.0-20230420074711-aeb1c3b09e25
-	github.com/mymmrac/telego v0.23.0
+	github.com/mymmrac/telego v0.24.0
 )
 
 require (
@@ -27,6 +27,6 @@ require (
 	github.com/prometheus-community/pro-bing v0.1.0
 	github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
-	github.com/valyala/fasthttp v1.46.0 // indirect
+	github.com/valyala/fasthttp v1.47.0 // indirect
 	github.com/xlab/closer v1.1.0
 )

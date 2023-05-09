@@ -342,7 +342,13 @@ func main() {
 		//AnyCallbackQueryWithMessage
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			uc := update.CallbackQuery
+			if uc == nil {
+				return
+			}
 			tm := uc.Message
+			if tm == nil {
+				return
+			}
 			my := true
 			if tm.Chat.Type != "private" && tm.ReplyToMessage != nil {
 				my = uc.From.ID == tm.ReplyToMessage.From.ID
@@ -386,6 +392,9 @@ func main() {
 		//AnyCommand
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
+			if tm == nil {
+				return
+			}
 			if tm.Chat.Type == "private" {
 				p := "/start "
 				if strings.HasPrefix(tm.Text, p) {
@@ -436,6 +445,9 @@ func main() {
 		//leftChat
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
+			if tm == nil {
+				return
+			}
 			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 				tu.Entity(dic.add(ul,
 					"en:He flew away, but promised to return❗\n    ",
@@ -453,6 +465,9 @@ func main() {
 		//newMember
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
+			if tm == nil {
+				return
+			}
 			if !chats.allowed(tm.Chat.ID) {
 				return
 			}

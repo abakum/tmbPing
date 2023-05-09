@@ -46,6 +46,6 @@ func leftChat() th.Predicate {
 }
 func newMember() th.Predicate {
 	return func(update telego.Update) bool {
-		return update.Message != nil && update.Message.NewChatMembers != nil
+		return update.Message != nil && len(update.Message.NewChatMembers) > 0
 	}
 }

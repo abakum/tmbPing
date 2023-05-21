@@ -448,7 +448,7 @@ func main() {
 			if tm == nil {
 				return
 			}
-			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
+			mwe := tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 				tu.Entity(dic.add(ul,
 					"en:He flew away, but promised to return❗\n    ",
 					"ru:Он улетел, но обещал вернуться❗\n    ",
@@ -460,7 +460,13 @@ func main() {
 				tu.Entity(dic.add(ul,
 					"en:Cute...",
 				)).Italic(), tu.Entity("😢"),
-			).WithReplyToMessageID(tm.MessageID))
+			)
+			if tm.ReplyToMessage == nil {
+				bot.SendMessage(mwe)
+			} else {
+				bot.SendMessage(mwe.WithReplyToMessageID(tm.MessageID))
+
+			}
 		}, leftChat())
 		//newMember
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
@@ -473,7 +479,7 @@ func main() {
 			}
 			for _, nu := range tm.NewChatMembers {
 				stdo.Println(nu.ID)
-				bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
+				mwe := tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 					tu.Entity(dic.add(ul,
 						"en:Hello villagers!",
 						"ru:Здорово, селяне!\n",
@@ -485,9 +491,13 @@ func main() {
 					tu.Entity(dic.add(ul,
 						"en:The cart is ready!🏓",
 						"ru:Телега готова!🏓",
-					)),
-				).WithReplyToMessageID(tm.MessageID))
-				return
+					)))
+				if tm.ReplyToMessage == nil {
+					bot.SendMessage(mwe)
+				} else {
+					bot.SendMessage(mwe.WithReplyToMessageID(tm.MessageID))
+				}
+				break
 			}
 
 		}, newMember())

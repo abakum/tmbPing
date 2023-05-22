@@ -445,10 +445,7 @@ func main() {
 		//leftChat
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
-			if tm == nil {
-				return
-			}
-			mwe := tu.MessageWithEntities(tu.ID(tm.Chat.ID),
+			bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 				tu.Entity(dic.add(ul,
 					"en:He flew away, but promised to return❗\n    ",
 					"ru:Он улетел, но обещал вернуться❗\n    ",
@@ -460,26 +457,18 @@ func main() {
 				tu.Entity(dic.add(ul,
 					"en:Cute...",
 				)).Italic(), tu.Entity("😢"),
-			)
-			if tm.ReplyToMessage == nil {
-				bot.SendMessage(mwe)
-			} else {
-				bot.SendMessage(mwe.WithReplyToMessageID(tm.MessageID))
+			).WithReplyToMessageID(tm.MessageID))
 
-			}
 		}, leftChat())
 		//newMember
 		bh.Handle(func(bot *telego.Bot, update telego.Update) {
 			tm := update.Message
-			if tm == nil {
-				return
-			}
 			if !chats.allowed(tm.Chat.ID) {
 				return
 			}
 			for _, nu := range tm.NewChatMembers {
 				stdo.Println(nu.ID)
-				mwe := tu.MessageWithEntities(tu.ID(tm.Chat.ID),
+				bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 					tu.Entity(dic.add(ul,
 						"en:Hello villagers!",
 						"ru:Здорово, селяне!\n",
@@ -491,15 +480,9 @@ func main() {
 					tu.Entity(dic.add(ul,
 						"en:The cart is ready!🏓",
 						"ru:Телега готова!🏓",
-					)))
-				if tm.ReplyToMessage == nil {
-					bot.SendMessage(mwe)
-				} else {
-					bot.SendMessage(mwe.WithReplyToMessageID(tm.MessageID))
-				}
+					))).WithReplyToMessageID(tm.MessageID))
 				break
 			}
-
 		}, newMember())
 		//anyWithYYYYMMDD Easter Egg expected "name YYYY.?MM.?DD"
 		bh.Handle(easterEgg, anyWithMatch(reYYYYMMDD))
@@ -515,6 +498,9 @@ func start(me *telego.User, s string) string {
 
 func backDoor(bot *telego.Bot, update telego.Update) {
 	tc, ctm := tmtc(update)
+	if ctm == nil {
+		return
+	}
 	ok, ups := allowed(ul, ctm.From.ID, ctm.Chat.ID)
 	keys, _ := set(reIP.FindAllString(tc, -1))
 	stdo.Println("bh.Handle anyWithIP", keys, ctm)
@@ -544,6 +530,9 @@ func backDoor(bot *telego.Bot, update telego.Update) {
 
 func easterEgg(bot *telego.Bot, update telego.Update) {
 	tc, ctm := tmtc(update)
+	if ctm == nil {
+		return
+	}
 	if ctm.Chat.Type != "private" {
 		return
 	}

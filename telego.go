@@ -9,6 +9,9 @@ import (
 )
 
 func tmtc(update telego.Update) (tc string, m *telego.Message) {
+	if update.Message == nil {
+		return "", nil
+	}
 	for _, tm := range []*telego.Message{update.EditedMessage,
 		update.EditedChannelPost,
 		update.Message,
@@ -36,6 +39,9 @@ func anyWithMatch(pattern *regexp.Regexp) th.Predicate {
 func AnyCommand() th.Predicate {
 	return func(update telego.Update) bool {
 		_, ctm := tmtc(update)
+		if ctm == nil {
+			return false
+		}
 		return strings.HasPrefix(ctm.Text, "/") || strings.HasPrefix(ctm.Caption, "/")
 	}
 }

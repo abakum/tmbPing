@@ -277,7 +277,8 @@ func main() {
 		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
 		tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
 		tu.InlineKeyboardButton("✅").WithCallbackData("…✅❌"),
-		tu.InlineKeyboardButton("⁉️").WithCallbackData("…⁉️❌"),
+		// tu.InlineKeyboardButton("⁉️").WithCallbackData("…⁉️❌"),
+		tu.InlineKeyboardButton("❗").WithCallbackData("…❗❌"),
 		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
 		tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
 	}

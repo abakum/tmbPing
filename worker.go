@@ -4,24 +4,36 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mymmrac/telego"
+	tg "github.com/mymmrac/telego"
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
 func worker(ip string, ch cCustomer) {
 	// var buttons *telego.InlineKeyboardMarkup
-	var err error
-	status := ""
-	tl := start(me, ip)
-	deadline := time.Now().Add(dd)
-	cus := customers{}
+	var (
+		err error
+		status,
+		statusOld string
+		tl       = start(me, ip)
+		deadline = time.Now().Add(dd)
+		cus      = customers{}
+		ikbs     = []tg.InlineKeyboardButton{
+			tu.InlineKeyboardButton("🔁").WithCallbackData("🔁"),
+			tu.InlineKeyboardButton("🔂").WithCallbackData("🔂"),
+			tu.InlineKeyboardButton("⏸️").WithCallbackData("⏸️"),
+			tu.InlineKeyboardButton("❌").WithCallbackData("❌"),
+			tu.InlineKeyboardButton("…").WithCallbackData("…"),
+			tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
+		}
+		ikbsf int
+	)
 	defer ips.del(ip, false)
 	for {
 		select {
 		case <-done:
 			done <- true //done other worker
 			for i, cu := range cus {
-				cu.Tm = &telego.Message{MessageID: cu.Tm.MessageID, From: &telego.User{ID: cu.Tm.From.ID}, Chat: telego.Chat{ID: cu.Tm.Chat.ID}}
+				cu.Tm = &tg.Message{MessageID: cu.Tm.MessageID, From: &tg.User{ID: cu.Tm.From.ID}, Chat: tg.Chat{ID: cu.Tm.Chat.ID}}
 				cu.Cmd = ip
 				if i == 0 {
 					cu.Tm.From.FirstName = status
@@ -53,7 +65,7 @@ func worker(ip string, ch cCustomer) {
 							for _, cu := range cus {
 								stdo.Println("bot.DeleteMessage", cu)
 								if cu.Reply != nil {
-									bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
+									bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
 								}
 							}
 							return
@@ -68,16 +80,8 @@ func worker(ip string, ch cCustomer) {
 				}
 				cus = append(cus, cust)
 			}
-			oStatus := status
+			statusOld = status
 			stdo.Println(ip, cust, len(ch), status, time.Now().Before(deadline))
-			ikbs := []telego.InlineKeyboardButton{
-				tu.InlineKeyboardButton("🔁").WithCallbackData("🔁"),
-				tu.InlineKeyboardButton("🔂").WithCallbackData("🔂"),
-				tu.InlineKeyboardButton("⏸️").WithCallbackData("⏸️"),
-				tu.InlineKeyboardButton("❌").WithCallbackData("❌"),
-				tu.InlineKeyboardButton("…").WithCallbackData("…"),
-				tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
-			}
 			if time.Now().Before(deadline) {
 				status, err = ping(ip)
 				if err != nil {
@@ -92,19 +96,15 @@ func worker(ip string, ch cCustomer) {
 				}
 			}
 			for i, cu := range cus {
-				stdo.Println(i, fcRfRc(cu.Tm), ip, fcRfRc(cu.Reply), status, oStatus)
-				if cu.Reply == nil || status != oStatus {
+				stdo.Println(i, fcRfRc(cu.Tm), ip, fcRfRc(cu.Reply), status, statusOld)
+				if cu.Reply == nil || status != statusOld {
 					if cu.Reply != nil {
-						bot.DeleteMessage(&telego.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
+						bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
 					}
-					ikbsf := 0
+					ikbsf = 0
 					if !chats.allowed(tf(cu.Tm.Chat.Type == "private", cu.Tm.From.ID, cu.Tm.Chat.ID)) {
 						ikbsf = len(ikbs) - 1
 					}
-					//ikbsl := len(ikbs) - 1
-					//if chats.allowed(cu.Tm.From.ID) {
-					//	ikbsl++
-					//}
 					cus[i].Reply, _ = bot.SendMessage(tu.MessageWithEntities(tu.ID(cu.Tm.Chat.ID),
 						tu.Entity(status),
 						tu.Entity(ip).Code(),

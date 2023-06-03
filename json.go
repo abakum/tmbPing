@@ -30,8 +30,7 @@ func loader() {
 }
 
 func saver() {
-	save = make(cCustomer, 1)
-	saveDone = make(chan bool, 1)
+	defer wg.Done()
 	cus := customers{}
 	conf := config{&dic, &cus}
 	for {

@@ -12,18 +12,21 @@ func tmtc(update tg.Update) (tc string, m *tg.Message) {
 	if update.Message == nil {
 		return "", nil
 	}
-	for _, tm := range []*tg.Message{update.EditedMessage,
+	for _, tm := range []*tg.Message{
+		update.EditedMessage,
 		update.EditedChannelPost,
 		update.Message,
-		update.ChannelPost} {
+		update.ChannelPost,
+	} {
 		//edit = i < 2
 		if tm != nil {
 			m = tm
 			tc += tm.Text + " "
 			tc += tm.Caption + " "
-			if tm.ReplyToMessage != nil {
-				tc += tm.ReplyToMessage.Text + " "
-				tc += tm.ReplyToMessage.Caption + " "
+			re := tm.ReplyToMessage
+			if re != nil {
+				tc += re.Text + " "
+				tc += re.Caption + " "
 			}
 			break
 		}
@@ -55,6 +58,15 @@ func newMember() th.Predicate {
 		return update.Message != nil && len(update.Message.NewChatMembers) > 0
 	}
 }
+
+func ReplyMessageIsMinusOrSlash() th.Predicate {
+	return func(update tg.Update) bool {
+		return update.Message != nil &&
+			update.Message.ReplyToMessage != nil &&
+			(update.Message.Text == "-" || update.Message.Text == "/")
+	}
+}
+
 func Delete(ChatID tg.ChatID, MessageID int) *tg.DeleteMessageParams {
 	return &tg.DeleteMessageParams{
 		ChatID:    ChatID,

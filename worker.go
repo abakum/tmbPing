@@ -64,8 +64,10 @@ func worker(ip string, ch cCustomer) {
 						if tsX == "" || strings.HasSuffix(status, tsX) || strings.HasPrefix(status, tsX) || (strings.HasPrefix(status, "❗") && tsX == "❗") {
 							for _, cu := range cus {
 								stdo.Println("bot.DeleteMessage", cu)
-								if cu.Reply != nil {
-									bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
+								re := cu.Reply
+								if re != nil {
+									// bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID})
+									bot.DeleteMessage(Delete(tu.ID(re.Chat.ID), re.MessageID))
 								}
 							}
 							return
@@ -96,10 +98,12 @@ func worker(ip string, ch cCustomer) {
 				}
 			}
 			for i, cu := range cus {
-				stdo.Println(i, fcRfRc(cu.Tm), ip, fcRfRc(cu.Reply), status, statusOld)
-				if cu.Reply == nil || status != statusOld {
-					if cu.Reply != nil {
-						bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(cu.Reply.Chat.ID), MessageID: cu.Reply.MessageID})
+				re := cu.Reply
+				stdo.Println(i, fcRfRc(cu.Tm), ip, fcRfRc(re), status, statusOld)
+				if re == nil || status != statusOld {
+					if re != nil {
+						// bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID})
+						bot.DeleteMessage(Delete(tu.ID(re.Chat.ID), re.MessageID))
 					}
 					ikbsf = 0
 					if !chats.allowed(tf(cu.Tm.Chat.Type == "private", cu.Tm.From.ID, cu.Tm.Chat.ID)) {

@@ -103,10 +103,14 @@ func main() {
 	loader()
 
 	closer.Bind(func() {
-		stdo.Println("Error", err)
-		err = stopH(bot, bh)
 		if err != nil {
-			stdo.Println("stopH", err)
+			stdo.Println("Error", err)
+		}
+		if bot != nil {
+			err = stopH(bot, bh)
+			if err != nil {
+				stdo.Println("stopH", err)
+			}
 		}
 		stdo.Println("closer done <- true")
 		done <- true
@@ -272,7 +276,8 @@ func bhAnyCallbackQueryWithMessage(bot *tg.Bot, update tg.Update) {
 		return
 	}
 	if Data == "❎" {
-		bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
+		// bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
+		bot.DeleteMessage(Delete(tu.ID(tm.Chat.ID), tm.MessageID))
 		return
 	}
 	if Data == "…" { //chats.allowed(uc.From.ID) &&
@@ -298,6 +303,13 @@ func bhAnyCallbackQueryWithMessage(bot *tg.Bot, update tg.Update) {
 func bhAnyCommand(bot *tg.Bot, update tg.Update) {
 	tm := update.Message
 	if tm == nil {
+		return
+	}
+	re := tm.ReplyToMessage
+	if re != nil && tm.Text == "/" { //for delete message reply it with /
+		stdo.Println("-----------", re.Chat.ID, re.MessageID)
+		// bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID})
+		bot.DeleteMessage(Delete(tu.ID(re.Chat.ID), re.MessageID))
 		return
 	}
 	if tm.Chat.Type == "private" {

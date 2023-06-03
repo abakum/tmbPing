@@ -55,3 +55,9 @@ func newMember() th.Predicate {
 		return update.Message != nil && len(update.Message.NewChatMembers) > 0
 	}
 }
+func Delete(ChatID tg.ChatID, MessageID int) *tg.DeleteMessageParams {
+	return &tg.DeleteMessageParams{
+		ChatID:    ChatID,
+		MessageID: MessageID,
+	}
+}

@@ -165,7 +165,7 @@ func startH(bot *tg.Bot) (bh *th.BotHandler, err error) {
 	//AnyCallbackQueryWithMessage
 	bh.Handle(bhAnyCallbackQueryWithMessage, th.AnyCallbackQueryWithMessage())
 	//delete reply message with - or / in text
-	bh.Handle(bhReplyMessageIsMinusOrSlash, ReplyMessageIsMinusOrSlash())
+	bh.Handle(bhReplyMessageIsMinus, ReplyMessageIsMinus())
 	//anyWithIP
 	bh.Handle(bhAnyWithMatch, anyWithMatch(reIP))
 	//AnyCommand
@@ -302,9 +302,12 @@ func bhAnyCallbackQueryWithMessage(bot *tg.Bot, update tg.Update) {
 		ips.write(ip, customer{Cmd: Data})
 	}
 }
-func bhReplyMessageIsMinusOrSlash(bot *tg.Bot, update tg.Update) {
+func bhReplyMessageIsMinus(bot *tg.Bot, update tg.Update) {
 	re := update.Message.ReplyToMessage
-	bot.DeleteMessage(Delete(tu.ID(re.Chat.ID), re.MessageID))
+	err := bot.DeleteMessage(Delete(tu.ID(re.Chat.ID), re.MessageID))
+	if err != nil {
+		bot.EditMessageText(&tg.EditMessageTextParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID, Text: "-"})
+	}
 }
 
 func bhAnyCommand(bot *tg.Bot, update tg.Update) {

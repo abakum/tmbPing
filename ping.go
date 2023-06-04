@@ -14,9 +14,10 @@ func ping(ip string) (status string, err error) {
 	}
 	defer pinger.Stop()
 	pinger.SetPrivileged(runtime.GOOS == "windows")
+	pinger.Size = 575
 	pinger.Count = 3
-	// pinger.Interval = time.Millisecond * 100
-	pinger.Interval = time.Millisecond * 333
+	pinger.Interval = time.Millisecond * 100
+	// pinger.Interval = time.Millisecond * 333
 	// pinger.Timeout = pinger.Interval*time.Duration(pinger.Count-1) + time.Millisecond*time.Duration(pinger.Count*100)
 	pinger.Timeout = time.Duration(pinger.Count*2) * pinger.Interval
 	err = pinger.Run() // Blocks until finished.

@@ -13,12 +13,11 @@ func tmtc(update tg.Update) (tc string, m *tg.Message) {
 		return "", nil
 	}
 	for _, tm := range []*tg.Message{
-		update.EditedMessage,
-		update.EditedChannelPost,
 		update.Message,
+		update.EditedMessage,
 		update.ChannelPost,
+		update.EditedChannelPost,
 	} {
-		//edit = i < 2
 		if tm != nil {
 			m = tm
 			tc += tm.Text + " "
@@ -50,20 +49,22 @@ func AnyCommand() th.Predicate {
 }
 func leftChat() th.Predicate {
 	return func(update tg.Update) bool {
-		return update.Message != nil && update.Message.LeftChatMember != nil
+		return update.Message != nil &&
+			update.Message.LeftChatMember != nil
 	}
 }
 func newMember() th.Predicate {
 	return func(update tg.Update) bool {
-		return update.Message != nil && len(update.Message.NewChatMembers) > 0
+		return update.Message != nil &&
+			len(update.Message.NewChatMembers) > 0
 	}
 }
 
-func ReplyMessageIsMinusOrSlash() th.Predicate {
+func ReplyMessageIsMinus() th.Predicate {
 	return func(update tg.Update) bool {
 		return update.Message != nil &&
 			update.Message.ReplyToMessage != nil &&
-			(update.Message.Text == "-" || update.Message.Text == "/")
+			update.Message.Text == "-"
 	}
 }
 

@@ -150,12 +150,11 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 		tun      ngrok.Tunnel
 	)
 	if true {
-		lvlName := "trace"
+		lvlName := "info" //"trace"
 		lvl, err := ngrok_log.LogLevelFromString(lvlName)
 		if err != nil {
 			return nil, nil, err
 		}
-
 		tun, err = ngrok.Listen(context.Background(),
 			nc.HTTPEndpoint(nc.WithForwardsTo(forwardsTo)),
 			ngrok.WithAuthtokenFromEnv(),
@@ -196,7 +195,7 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 		for {
 			conn, err := tun.Accept()
 			if err != nil {
-				stdo.Printf("error accept connection%v", err)
+				stdo.Printf("error accept connection %v", err)
 				return err
 			}
 			go func() {

@@ -18,8 +18,8 @@ const (
 )
 
 var (
-	publicURL   = "https://localhost"
-	forwardsTo  = "http://localhost:8080"
+	// localhost  = "http://localhost:8080"
+	localhost   = "https://localhost"
 	chats       AAA
 	done        = make(chan bool, 10)
 	ips         = sCustomer{mcCustomer: mcCustomer{}}

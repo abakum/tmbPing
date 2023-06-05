@@ -148,15 +148,19 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 		endPoint = "/" + fmt.Sprint(time.Now().Format("2006010215040501"))
 		err      error
 		tun      ngrok.Tunnel
+		updates  <-chan tg.Update
 	)
-	if true {
+	//try use ngrok.exe client for debuging
+	publicURL, forwardsTo, err := ngrokUrlAddr()
+	if err != nil {
+		//use ngrok-go client
 		lvlName := "info" //"trace"
 		lvl, err := ngrok_log.LogLevelFromString(lvlName)
 		if err != nil {
 			return nil, nil, err
 		}
 		tun, err = ngrok.Listen(context.Background(),
-			nc.HTTPEndpoint(nc.WithForwardsTo(forwardsTo)),
+			nc.HTTPEndpoint(nc.WithForwardsTo(localhost)),
 			ngrok.WithAuthtokenFromEnv(),
 			ngrok.WithLogger(&logger{lvl}),
 		)
@@ -164,48 +168,53 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 			return nil, nil, err
 		}
 		publicURL = tun.URL()
+		forwardsTo = tun.ForwardsTo()
 		defer func() {
 			if err != nil {
 				tun.Session().Close()
 			}
 		}()
+		serv := &fasthttp.Server{}
+		updates, err = bot.UpdatesViaWebhook(endPoint, tg.WithWebhookServer(tg.FastHTTPWebhookServer{
+			Server: serv,
+			Router: router.New(),
+		}))
+		if err != nil {
+			return nil, nil, err
+		}
+		go func() error {
+			for {
+				conn, err := tun.Accept()
+				if err != nil {
+					stdo.Printf("error accept connection %v", err)
+					return err
+				}
+				go func() {
+					err := serv.ServeConn(conn)
+					if err != nil {
+						stdo.Printf("error serving connection %v: %v", conn, err)
+					}
+				}()
+			}
+		}()
 	} else {
-		publicURL, forwardsTo, _ = ngrokUrlAddr()
+		updates, err = bot.UpdatesViaWebhook(endPoint)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 
 	stdo.Println(publicURL+endPoint, forwardsTo)
+	//for ngrok.exe client without web interface or for confirm ngrok-go client config
 	if NGROK_API_KEY, _ := os.LookupEnv("NGROK_API_KEY"); NGROK_API_KEY != "" {
 		publicURL, forwardsTo, _ = ngrokUrlTo(context.Background(), NGROK_API_KEY)
+		stdo.Println(publicURL+endPoint, forwardsTo)
 	}
-	stdo.Println(publicURL+endPoint, forwardsTo)
 
 	err = bot.SetWebhook(tu.Webhook(publicURL + endPoint))
 	if err != nil {
 		return nil, nil, err
 	}
-	serv := &fasthttp.Server{}
-	updates, err := bot.UpdatesViaWebhook(endPoint, tg.WithWebhookServer(tg.FastHTTPWebhookServer{
-		Server: serv,
-		Router: router.New(),
-	}))
-	if err != nil {
-		return nil, nil, err
-	}
-	go func() error {
-		for {
-			conn, err := tun.Accept()
-			if err != nil {
-				stdo.Printf("error accept connection %v", err)
-				return err
-			}
-			go func() {
-				err := serv.ServeConn(conn)
-				if err != nil {
-					stdo.Printf("error serving connection %v: %v", conn, err)
-				}
-			}()
-		}
-	}()
 
 	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
@@ -229,7 +238,12 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 
 	go func() {
 		hp := strings.TrimPrefix(forwardsTo, "http://")
-		hp = strings.TrimPrefix(hp, "https://")
+		if strings.HasPrefix(forwardsTo, "https://") {
+			hp = strings.TrimPrefix(forwardsTo, "https://")
+			if !strings.Contains(hp, ":") {
+				hp += ":443"
+			}
+		}
 		err = bot.StartWebhook(hp)
 		if err != nil {
 			stdo.Println("StartWebhook", err)

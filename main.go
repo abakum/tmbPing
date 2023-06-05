@@ -189,6 +189,7 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 					stdo.Printf("error accept connection %v", err)
 					return err
 				}
+				stdo.Println(conn.RemoteAddr().String(), "=>", conn.LocalAddr().String())
 				go func() {
 					err := serv.ServeConn(conn)
 					if err != nil {

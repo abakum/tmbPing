@@ -14,6 +14,8 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/xlab/closer"
+	"golang.ngrok.com/ngrok"
+	nc "golang.ngrok.com/ngrok/config"
 )
 
 func main() {
@@ -43,6 +45,7 @@ func main() {
 		tmbPingJson = filepath.Join(ex, tmbPingJson)
 	}
 	stdo.Println(filepath.FromSlash(tmbPingJson))
+
 	token, ok := os.LookupEnv("TOKEN")
 	if !ok {
 		err = fmt.Errorf(dic.add(ul,
@@ -60,7 +63,7 @@ func main() {
 		return
 	}
 	// bot.DeleteMyCommands(nil)
-	bh, err := startH(bot)
+	bh, nt, err := startH(bot)
 	if err != nil {
 		return
 	}
@@ -88,11 +91,11 @@ func main() {
 				ips.update(customer{})
 			case t := <-tacker.C:
 				stdo.Println("Tack at", t)
-				err = stopH(bot, bh)
+				err = stopH(bot, bh, nt)
 				if err != nil {
 					return
 				}
-				bh, err = startH(bot)
+				bh, nt, err = startH(bot)
 				if err != nil {
 					return
 				}
@@ -101,17 +104,12 @@ func main() {
 	}()
 
 	loader()
-
 	closer.Bind(func() {
 		if err != nil {
 			stdo.Println("Error", err)
 		}
-		if bot != nil {
-			err = stopH(bot, bh)
-			if err != nil {
-				stdo.Println("stopH", err)
-			}
-		}
+		err = stopH(bot, bh, nt)
+		stdo.Println("stopH", err)
 		stdo.Println("closer done <- true")
 		done <- true
 		stdo.Println("closer ips.close")
@@ -120,46 +118,66 @@ func main() {
 	})
 	closer.Hold()
 }
-func stopH(bot *tg.Bot, bh *th.BotHandler) (err error) {
+func stopH(bot *tg.Bot, bh *th.BotHandler, tu *ngrok.Tunnel) (err error) {
 	if bh != nil {
 		bh.Stop()
+		stdo.Println("bh.Stop")
 	}
 	if bot != nil {
-		err = bot.StopWebhook()
-		if err != nil {
+		if bot.IsRunningWebhook() {
+			err = bot.StopWebhook()
 			stdo.Println("StopWebhook", err)
 		}
 		err = bot.DeleteWebhook(&tg.DeleteWebhookParams{
 			DropPendingUpdates: false,
 		})
+		stdo.Println("DeleteWebhook", err)
+	}
+	if tu != nil {
+		err = (*tu).Session().Close()
+		stdo.Println("Session().Close", err)
 	}
 	return
 }
 
-func startH(bot *tg.Bot) (bh *th.BotHandler, err error) {
+func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 	var (
-		publicURL = "https://localhost"
-		addr      = "localhost:443"
-		endPoint  = "/" + fmt.Sprint(time.Now().Format("2006010215040501"))
+		endPoint = "/" + fmt.Sprint(time.Now().Format("2006010215040501"))
+		err      error
+		tun      ngrok.Tunnel
 	)
-	publicURL, addr, err = ngrokUrlAddr()
-	if err != nil {
-		if NGROK_API_KEY, ok := os.LookupEnv("NGROK_API_KEY"); !ok {
-			publicURL, addr, _ = ngrokUrlTo(context.Background(), NGROK_API_KEY)
+	if false {
+		tun, err = ngrok.Listen(context.Background(), nc.HTTPEndpoint(nc.WithForwardsTo(forwardsTo)), ngrok.WithAuthtokenFromEnv())
+		if err != nil {
+			return nil, nil, err
 		}
+		publicURL = tun.URL()
+		defer func() {
+			if err != nil {
+				tun.Session().Close()
+			}
+		}()
+	} else {
+		publicURL, forwardsTo, err = ngrokUrlAddr()
 	}
-	stdo.Println(publicURL + endPoint)
+
+	stdo.Println(publicURL+endPoint, forwardsTo)
+	if NGROK_API_KEY, _ := os.LookupEnv("NGROK_API_KEY"); NGROK_API_KEY != "" {
+		publicURL, forwardsTo, _ = ngrokUrlTo(context.Background(), NGROK_API_KEY)
+	}
+	stdo.Println(publicURL+endPoint, forwardsTo)
+
 	err = bot.SetWebhook(tu.Webhook(publicURL + endPoint))
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 	updates, err := bot.UpdatesViaWebhook(endPoint)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
-	bh, err = th.NewBotHandler(bot, updates)
+	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
-		return
+		return nil, nil, err
 	}
 
 	//AnyCallbackQueryWithMessage
@@ -178,12 +196,16 @@ func startH(bot *tg.Bot) (bh *th.BotHandler, err error) {
 	bh.Handle(bhEasterEgg, anyWithMatch(reYYYYMMDD))
 
 	go func() {
-		err = bot.StartWebhook(addr)
-		stdo.Println("StartWebhook", err)
+		hp := strings.TrimPrefix(forwardsTo, "http://")
+		hp = strings.TrimPrefix(hp, "https://")
+		err = bot.StartWebhook(hp)
+		if err != nil {
+			stdo.Println("StartWebhook", err)
+			closer.Close()
+		}
 	}()
-
 	go bh.Start()
-	return
+	return bh, &tun, nil
 }
 
 func bhAnyWithMatch(bot *tg.Bot, update tg.Update) {

@@ -13,6 +13,45 @@ import (
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
+const (
+	numFL = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
+)
+
+var (
+	publicURL   = "https://localhost"
+	forwardsTo  = "http://localhost:8080"
+	chats       AAA
+	done        = make(chan bool, 10)
+	ips         = sCustomer{mcCustomer: mcCustomer{}}
+	bot         *tg.Bot
+	refresh     = time.Second * 60
+	dd          = time.Hour * 8
+	stdo        = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
+	save        = make(cCustomer, 1)
+	saveDone    = make(chan bool, 1)
+	tmbPingJson = "tmbPing.json"
+	ticker,
+	tacker *time.Ticker
+	dic        = mss{}
+	reIP       = regexp.MustCompile(numFL + `(\.(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){2}\.` + numFL)
+	reYYYYMMDD = regexp.MustCompile(`(\p{L}*)\s([12][0-9][0-9][0-9]).?(0[1-9]|1[0-2]).?(0[1-9]|[12][0-9]|30|31)`)
+	me         *tg.User
+	ul         string
+	ikbs       = []tg.InlineKeyboardButton{
+		tu.InlineKeyboardButton("🔁").WithCallbackData("…🔁"),
+		tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
+		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
+		tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
+		tu.InlineKeyboardButton("✅").WithCallbackData("…✅❌"),
+		// tu.InlineKeyboardButton("⁉️").WithCallbackData("…⁉️❌"),
+		tu.InlineKeyboardButton("❗").WithCallbackData("…❗❌"),
+		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
+		tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
+	}
+	ikbsf int
+	wg    sync.WaitGroup
+)
+
 type customer struct {
 	Tm    *tg.Message `json:"tm,omitempty"`    //task
 	Cmd   string      `json:"cmd,omitempty"`   //command
@@ -159,40 +198,3 @@ func (m mss) add(key string, vals ...string) (val string) {
 	}
 	return
 }
-
-const (
-	numFL = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
-)
-
-var (
-	chats       AAA
-	done        = make(chan bool, 10)
-	ips         = sCustomer{mcCustomer: mcCustomer{}}
-	bot         *tg.Bot
-	refresh     = time.Second * 60
-	dd          = time.Hour * 8
-	stdo        = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
-	save        = make(cCustomer, 1)
-	saveDone    = make(chan bool, 1)
-	tmbPingJson = "tmbPing.json"
-	ticker      *time.Ticker
-	tacker      *time.Ticker
-	dic         = mss{}
-	reIP        = regexp.MustCompile(numFL + `(\.(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){2}\.` + numFL)
-	reYYYYMMDD  = regexp.MustCompile(`(\p{L}*)\s([12][0-9][0-9][0-9]).?(0[1-9]|1[0-2]).?(0[1-9]|[12][0-9]|30|31)`)
-	me          *tg.User
-	ul          string
-	ikbs        = []tg.InlineKeyboardButton{
-		tu.InlineKeyboardButton("🔁").WithCallbackData("…🔁"),
-		tu.InlineKeyboardButton("🔂").WithCallbackData("…🔂"),
-		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️"),
-		tu.InlineKeyboardButton("❌").WithCallbackData("…❌"),
-		tu.InlineKeyboardButton("✅").WithCallbackData("…✅❌"),
-		// tu.InlineKeyboardButton("⁉️").WithCallbackData("…⁉️❌"),
-		tu.InlineKeyboardButton("❗").WithCallbackData("…❗❌"),
-		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
-		tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
-	}
-	ikbsf int
-	wg    sync.WaitGroup
-)

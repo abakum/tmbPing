@@ -16,7 +16,7 @@ import (
 	"github.com/ngrok/ngrok-api-go/v5/tunnels"
 )
 
-func ngrokUrlAddr() (PublicURL string, host string, err error) {
+func ngrokUrlAddr() (PublicURL string, ForwardsTo string, err error) {
 	web_addr := os.Getenv("web_addr")
 	if web_addr == "" {
 		web_addr = "localhost:4040"
@@ -59,20 +59,23 @@ func ngrokUrlAddr() (PublicURL string, host string, err error) {
 	}
 	for _, tunnel := range ngrok.Tunnels {
 		PublicURL = tunnel.PublicURL
-		u, err := url.Parse(tunnel.Config.Addr)
-		if err != nil {
-			stdo.Println("ngrokUrlAddr url.Parse error:", err)
-			return PublicURL, tunnel.Config.Addr, err
+		ForwardsTo = tunnel.Config.Addr
+		if false {
+			u, err := url.Parse(tunnel.Config.Addr)
+			if err != nil {
+				stdo.Println("ngrokUrlAddr url.Parse error:", err)
+				return PublicURL, tunnel.Config.Addr, err
+			}
+			ForwardsTo = u.Host
 		}
-		host = u.Host
-		if PublicURL != "" && host != "" {
+		if PublicURL != "" && ForwardsTo != "" {
 			break
 		}
 	}
 	return
 }
 
-func ngrokUrlTo(ctx context.Context, NGROK_API_KEY string) (PublicURL string, host string, err error) {
+func ngrokUrlTo(ctx context.Context, NGROK_API_KEY string) (PublicURL string, ForwardsTo string, err error) {
 	// construct the api client
 	clientConfig := ngrok.NewClientConfig(NGROK_API_KEY)
 
@@ -91,13 +94,17 @@ func ngrokUrlTo(ctx context.Context, NGROK_API_KEY string) (PublicURL string, ho
 			return
 		}
 		PublicURL = iter.Item().PublicURL
-		u, err := url.Parse(iter.Item().ForwardsTo)
-		if err != nil {
-			stdo.Println("ngrokUrlTo url.Parse error:", err)
-			return PublicURL, iter.Item().ForwardsTo, err
+		ForwardsTo = iter.Item().ForwardsTo
+		if false {
+			stdo.Println(iter.Item().ForwardsTo)
+			u, err := url.Parse(iter.Item().ForwardsTo)
+			if err != nil {
+				stdo.Println("ngrokUrlTo url.Parse error:", err)
+				return PublicURL, iter.Item().ForwardsTo, err
+			}
+			ForwardsTo = u.Host
 		}
-		host = u.Host
-		if PublicURL != "" && host != "" {
+		if PublicURL != "" && ForwardsTo != "" {
 			break
 		}
 	}

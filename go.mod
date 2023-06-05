@@ -5,15 +5,26 @@ go 1.20
 require (
 	github.com/abakum/gozodiac v0.0.0-20230421061758-fa2f82ab0d93
 	github.com/mymmrac/telego v0.24.0
+	golang.ngrok.com/ngrok v1.1.1
 )
 
 require (
+	github.com/go-stack/stack v1.8.1 // indirect
+	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/inconshreveable/log15 v3.0.0-testing.3+incompatible // indirect
+	github.com/inconshreveable/log15/v3 v3.0.0-testing.5 // indirect
+	github.com/jpillora/backoff v1.0.0 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.27.6 // indirect
+	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.2.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/term v0.8.0 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 )
 
 require (

@@ -10,12 +10,15 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/jibber_jabber"
+	"github.com/fasthttp/router"
 	tg "github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
+	"github.com/valyala/fasthttp"
 	"github.com/xlab/closer"
 	"golang.ngrok.com/ngrok"
 	nc "golang.ngrok.com/ngrok/config"
+	ngrok_log "golang.ngrok.com/ngrok/log"
 )
 
 func main() {
@@ -146,8 +149,18 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 		err      error
 		tun      ngrok.Tunnel
 	)
-	if false {
-		tun, err = ngrok.Listen(context.Background(), nc.HTTPEndpoint(nc.WithForwardsTo(forwardsTo)), ngrok.WithAuthtokenFromEnv())
+	if true {
+		lvlName := "trace"
+		lvl, err := ngrok_log.LogLevelFromString(lvlName)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		tun, err = ngrok.Listen(context.Background(),
+			nc.HTTPEndpoint(nc.WithForwardsTo(forwardsTo)),
+			ngrok.WithAuthtokenFromEnv(),
+			ngrok.WithLogger(&logger{lvl}),
+		)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -158,7 +171,7 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 			}
 		}()
 	} else {
-		publicURL, forwardsTo, err = ngrokUrlAddr()
+		publicURL, forwardsTo, _ = ngrokUrlAddr()
 	}
 
 	stdo.Println(publicURL+endPoint, forwardsTo)
@@ -171,10 +184,30 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	updates, err := bot.UpdatesViaWebhook(endPoint)
+	serv := &fasthttp.Server{}
+	updates, err := bot.UpdatesViaWebhook(endPoint, tg.WithWebhookServer(tg.FastHTTPWebhookServer{
+		Server: serv,
+		Router: router.New(),
+	}))
 	if err != nil {
 		return nil, nil, err
 	}
+	go func() error {
+		for {
+			conn, err := tun.Accept()
+			if err != nil {
+				stdo.Printf("error accept connection%v", err)
+				return err
+			}
+			go func() {
+				err := serv.ServeConn(conn)
+				if err != nil {
+					stdo.Printf("error serving connection %v: %v", conn, err)
+				}
+			}()
+		}
+	}()
+
 	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
 		return nil, nil, err

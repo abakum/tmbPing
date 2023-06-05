@@ -118,7 +118,7 @@ func main() {
 	})
 	closer.Hold()
 }
-func stopH(bot *tg.Bot, bh *th.BotHandler, tu *ngrok.Tunnel) (err error) {
+func stopH(bot *tg.Bot, bh *th.BotHandler, nt *ngrok.Tunnel) (err error) {
 	if bh != nil {
 		bh.Stop()
 		stdo.Println("bh.Stop")
@@ -133,8 +133,8 @@ func stopH(bot *tg.Bot, bh *th.BotHandler, tu *ngrok.Tunnel) (err error) {
 		})
 		stdo.Println("DeleteWebhook", err)
 	}
-	if tu != nil {
-		err = (*tu).Session().Close()
+	if nt != nil {
+		err = (*nt).Session().Close()
 		stdo.Println("Session().Close", err)
 	}
 	return

@@ -14,7 +14,7 @@ func ping(ip string) (status string, err error) {
 	}
 	defer pinger.Stop()
 	pinger.SetPrivileged(runtime.GOOS == "windows")
-	pinger.Size = 575
+	pinger.Size = 575 //https://github.com/go-ping/ping/issues/168
 	pinger.Count = 3
 	pinger.Interval = time.Millisecond * 100
 	// pinger.Interval = time.Millisecond * 333

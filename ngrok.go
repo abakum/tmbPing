@@ -14,7 +14,6 @@ import (
 	"github.com/mymmrac/telego"
 	"github.com/ngrok/ngrok-api-go/v5"
 	"github.com/ngrok/ngrok-api-go/v5/tunnels"
-	ngrok_log "golang.ngrok.com/ngrok/log"
 )
 
 func ngrokUrlAddr() (PublicURL string, ForwardsTo string, err error) {
@@ -139,16 +138,4 @@ func manInTheMiddle(bot *telego.Bot) bool {
 	}
 	stdo.Printf("manInTheMiddle GetWebhookInfo.IPAddress: %v but GetWebhookInfo.URL ip:%v\n", info.IPAddress, ips)
 	return true
-}
-
-type logger struct {
-	lvl ngrok_log.LogLevel
-}
-
-func (l *logger) Log(ctx context.Context, lvl ngrok_log.LogLevel, msg string, data map[string]interface{}) {
-	if lvl > l.lvl {
-		return
-	}
-	lvlName, _ := ngrok_log.StringFromLogLevel(lvl)
-	stdo.Printf("[%s] %s %v", lvlName, msg, data)
 }

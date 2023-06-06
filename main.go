@@ -11,14 +11,11 @@ import (
 	"time"
 
 	"github.com/cloudfoundry/jibber_jabber"
-	"github.com/fasthttp/router"
 	tg "github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
-	"github.com/valyala/fasthttp"
 	"github.com/xlab/closer"
 	"golang.ngrok.com/ngrok"
-	nc "golang.ngrok.com/ngrok/config"
 )
 
 func main() {
@@ -143,59 +140,6 @@ func stopH(bot *tg.Bot, bh *th.BotHandler, nt *ngrok.Tunnel) (err error) {
 	return
 }
 
-// UpdatesWithSecret set SecretToken to FastHTTPWebhookServer and SetWebhookParams
-func UpdatesWithSecret(bot *tg.Bot, endPoint, SecretToken, publicURL string) (updates <-chan tg.Update, whs tg.FastHTTPWebhookServer, err error) {
-	whs = tg.FastHTTPWebhookServer{
-		Server:      &fasthttp.Server{},
-		Router:      router.New(),
-		SecretToken: SecretToken,
-	}
-	updates, err = bot.UpdatesViaWebhook(endPoint, tg.WithWebhookServer(whs), tg.WithWebhookSet(tu.Webhook(publicURL+endPoint).WithSecretToken(SecretToken)))
-	return
-}
-
-// UpdatesWithNgrok start ngrok.Tunnel with os.Getenv("NGROK_AUTHTOKEN") and SecretToken
-// for close ngrok.Tunnel use (*nt).Session().Close()
-func UpdatesWithNgrok(bot *tg.Bot, endPoint, SecretToken, forwardsTo string) (updates <-chan tg.Update, nt *ngrok.Tunnel, err error) {
-	tun, err := ngrok.Listen(context.Background(), nc.HTTPEndpoint(
-		nc.WithForwardsTo(forwardsTo)),
-		ngrok.WithAuthtokenFromEnv(),
-	)
-	if err != nil {
-		return
-	}
-	nt = &tun
-	publicURL := tun.URL()
-	defer func() {
-		if err != nil {
-			tun.Session().Close()
-			nt = nil
-		}
-	}()
-	updates, whs, err := UpdatesWithSecret(bot, endPoint, SecretToken, publicURL)
-	if err != nil {
-		return
-	}
-	stdo.Println(publicURL+endPoint, forwardsTo)
-	go func() {
-		for {
-			conn, err := tun.Accept()
-			if err != nil {
-				stdo.Printf("error accept connection %v", err)
-				return
-			}
-			stdo.Println(conn.RemoteAddr().String(), "=>", conn.LocalAddr().String())
-			go func() {
-				err := whs.Server.ServeConn(conn)
-				if err != nil {
-					stdo.Printf("error serving connection %v: %v", conn, err)
-				}
-			}()
-		}
-	}()
-	return
-}
-
 func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 	var (
 		endPoint = "/" + fmt.Sprint(time.Now().Format("2006010215040501"))
@@ -210,14 +154,14 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 	if err != nil {
 		//use ngrok-go client
 		forwardsTo = localhost
-		updates, nt, err = UpdatesWithNgrok(bot, endPoint, secret, forwardsTo)
+		updates, nt, err = UpdatesWithNgrok(bot, secret, forwardsTo, endPoint)
 	} else {
 		//for ngrok.exe client without web interface
 		if NGROK_API_KEY, _ := os.LookupEnv("NGROK_API_KEY"); NGROK_API_KEY != "" {
 			publicURL, forwardsTo, _ = ngrokUrlTo(context.Background(), NGROK_API_KEY)
 			stdo.Println(publicURL+endPoint, forwardsTo)
 		}
-		updates, _, err = UpdatesWithSecret(bot, endPoint, secret, publicURL)
+		updates, _, err = UpdatesWithSecret(bot, secret, publicURL, endPoint)
 	}
 	if err != nil {
 		return nil, nil, err
@@ -255,14 +199,18 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 }
 
 func webHookAddress(forwardsTo string) (hp string) {
-	if strings.HasPrefix(forwardsTo, "https://") {
-		hp = strings.TrimPrefix(forwardsTo, "https://")
-		if !strings.Contains(hp, ":") {
-			hp += ":443"
+	for k, v := range map[string]string{
+		"http://":  ":80",
+		"https://": ":443",
+	} {
+		if strings.HasPrefix(forwardsTo, k) {
+			hp = strings.TrimPrefix(forwardsTo, k)
+			if !strings.Contains(hp, ":") {
+				hp += v
+			}
+			break
 		}
-		return
 	}
-	hp = strings.TrimPrefix(forwardsTo, "http://")
 	return
 }
 

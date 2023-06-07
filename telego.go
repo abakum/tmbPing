@@ -81,20 +81,21 @@ func Delete(ChatID tg.ChatID, MessageID int) *tg.DeleteMessageParams {
 }
 
 // UpdatesWithSecret set secretToken to FastHTTPWebhookServer and SetWebhookParams
-func UpdatesWithSecret(b *tg.Bot, secretToken, publicURL, endPoint string) (<-chan tg.Update, tg.FastHTTPWebhookServer, error) {
+func UpdatesWithSecret(b *tg.Bot, secretToken, publicURL, endPoint string) (<-chan tg.Update, error) {
 	whs := tg.FastHTTPWebhookServer{
 		Logger:      b.Logger(),
 		Server:      &fasthttp.Server{},
 		Router:      router.New(),
 		SecretToken: secretToken,
 	}
+	whp := &tg.SetWebhookParams{
+		URL:         publicURL + endPoint,
+		SecretToken: secretToken,
+	}
 	updates, err := b.UpdatesViaWebhook(endPoint,
 		tg.WithWebhookServer(whs),
-		tg.WithWebhookSet(&tg.SetWebhookParams{
-			URL:         publicURL + endPoint,
-			SecretToken: secretToken,
-		}))
-	return updates, whs, err
+		tg.WithWebhookSet(whp))
+	return updates, err
 }
 
 // UpdatesWithNgrok start ngrok.Tunnel with os.Getenv("NGROK_AUTHTOKEN") and SecretToken
@@ -111,28 +112,31 @@ func UpdatesWithNgrok(b *tg.Bot, secretToken, forwardsTo, endPoint string) (<-ch
 	defer func() {
 		if err != nil {
 			err = tun.Session().Close()
-			b.Logger().Errorf("error close session of tunnel %v", err)
+			b.Logger().Errorf("error close session of ngrok tunnel %v", err)
 		}
 	}()
-	updates, whs, err := UpdatesWithSecret(b, secretToken, publicURL, endPoint)
+	whs := tg.FastHTTPWebhookServer{
+		Logger:      b.Logger(),
+		Server:      &fasthttp.Server{},
+		Router:      router.New(),
+		SecretToken: secretToken,
+	}
+	whp := &tg.SetWebhookParams{
+		URL:         publicURL + endPoint,
+		SecretToken: secretToken,
+	}
+	fws := tg.FuncWebhookServer{
+		Server: whs,
+		// Override default start func to use Ngrok tunnel
+		StartFunc: func(_ string) error {
+			return whs.Server.Serve(tun)
+		},
+	}
+	updates, err := b.UpdatesViaWebhook(endPoint,
+		tg.WithWebhookServer(fws),
+		tg.WithWebhookSet(whp))
 	if err != nil {
 		return nil, nil, err
 	}
-	go func() {
-		for {
-			conn, err := tun.Accept()
-			if err != nil {
-				b.Logger().Errorf("error accept connection %v", err)
-				return
-			}
-			b.Logger().Debugf("%s => %s", conn.RemoteAddr().String(), conn.LocalAddr().String())
-			go func() {
-				err := whs.Server.ServeConn(conn)
-				if err != nil {
-					b.Logger().Errorf("error serving connection %v: %v", conn, err)
-				}
-			}()
-		}
-	}()
-	return updates, &tun, err
+	return updates, &tun, nil
 }

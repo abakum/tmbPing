@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -119,9 +120,17 @@ func main() {
 	closer.Hold()
 }
 func stopH(bot *tg.Bot, bh *th.BotHandler, nt *ngrok.Tunnel) (err error) {
+	//bh.Stop
+	//bot.StopWebhook
+	//bot.DeleteWebhook
+	//Session().Close()
 	if bh != nil {
 		bh.Stop()
 		stdo.Println("bh.Stop")
+	}
+	if nt != nil {
+		err = (*nt).Session().Close()
+		stdo.Println("Session().Close", err)
 	}
 	if bot != nil {
 		if bot.IsRunningWebhook() {
@@ -133,10 +142,6 @@ func stopH(bot *tg.Bot, bh *th.BotHandler, nt *ngrok.Tunnel) (err error) {
 		})
 		stdo.Println("DeleteWebhook", err)
 	}
-	if nt != nil {
-		err = (*nt).Session().Close()
-		stdo.Println("Session().Close", err)
-	}
 	return
 }
 
@@ -144,28 +149,47 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 	var (
 		endPoint = "/" + fmt.Sprint(time.Now().Format("2006010215040501"))
 		secret   = endPoint[rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(endPoint)-3):]
-		err      error
-		// tun      ngrok.Tunnel
-		updates <-chan tg.Update
-		nt      *ngrok.Tunnel
+		updates  <-chan tg.Update
+		nt       *ngrok.Tunnel
 	)
-	//try use ngrok.exe client for debuging
-	publicURL, forwardsTo, err := ngrokUrlAddr()
+	//try use ngrok.exe client with web interface for debuging
+	publicURL, forwardsTo, err := ngrokWeb()
 	if err != nil {
-		//use ngrok-go client
-		forwardsTo = localhost
-		updates, nt, err = UpdatesWithNgrok(bot, secret, forwardsTo, endPoint)
-	} else {
-		//for ngrok.exe client without web interface
-		if NGROK_API_KEY, _ := os.LookupEnv("NGROK_API_KEY"); NGROK_API_KEY != "" {
-			publicURL, forwardsTo, _ = ngrokUrlTo(context.Background(), NGROK_API_KEY)
-			stdo.Println(publicURL+endPoint, forwardsTo)
+		//for ngrok.exe client without web interface at os.Getenv("web_addr")
+		NGROK_API_KEY := os.Getenv("NGROK_API_KEY")
+		if NGROK_API_KEY != "" {
+			ctx, ca := context.WithTimeout(context.Background(), time.Second*3)
+			defer ca()
+			publicURL, forwardsTo, err = ngrokAPI(ctx, NGROK_API_KEY)
 		}
-		updates, _, err = UpdatesWithSecret(bot, secret, publicURL, endPoint)
+		if err != nil {
+			//use ngrok-go client
+			forwardsTo = os.Getenv("forwardsTo")
+			if forwardsTo == "" {
+				forwardsTo = "https://localhost"
+			}
+			if os.Getenv("NGROK_AUTHTOKEN") != "" {
+				updates, nt, err = UpdatesWithNgrok(bot, secret, forwardsTo, endPoint)
+			} else {
+				updates, err = UpdatesWithSecret(bot, secret, forwardsTo, endPoint)
+			}
+		} else {
+			updates, err = UpdatesWithSecret(bot, secret, publicURL, endPoint) //publicURL from ngrokAPI
+		}
+	} else {
+		updates, err = UpdatesWithSecret(bot, secret, publicURL, endPoint) //publicURL from ngrokWeb
 	}
 	if err != nil {
 		return nil, nil, err
 	}
+
+	go func() {
+		err = bot.StartWebhook(webHookAddress(forwardsTo))
+		if err != nil {
+			stdo.Println("StartWebhook", err)
+			closer.Close()
+		}
+	}()
 
 	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
@@ -187,30 +211,30 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 	//anyWithYYYYMMDD Easter Egg expected "name YYYY.?MM.?DD"
 	bh.Handle(bhEasterEgg, anyWithMatch(reYYYYMMDD))
 
-	go func() {
-		err = bot.StartWebhook(webHookAddress(forwardsTo))
-		if err != nil {
-			stdo.Println("StartWebhook", err)
-			closer.Close()
-		}
-	}()
 	go bh.Start()
 	return bh, nt, nil
 }
 
 func webHookAddress(forwardsTo string) (hp string) {
+	hp = strings.TrimPrefix(forwardsTo, ":")
+	_, err := strconv.Atoi(hp)
+	if err == nil {
+		hp = "localhost:" + hp
+	}
 	for k, v := range map[string]string{
 		"http://":  ":80",
 		"https://": ":443",
+		"":         ":80",
 	} {
-		if strings.HasPrefix(forwardsTo, k) {
-			hp = strings.TrimPrefix(forwardsTo, k)
+		if strings.HasPrefix(hp, k) {
+			hp = strings.TrimPrefix(hp, k)
 			if !strings.Contains(hp, ":") {
 				hp += v
 			}
 			break
 		}
 	}
+	stdo.Println(hp)
 	return
 }
 

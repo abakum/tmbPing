@@ -4,8 +4,8 @@ go 1.20
 
 require (
 	github.com/abakum/gozodiac v0.0.0-20230421061758-fa2f82ab0d93
-	github.com/mymmrac/telego v0.24.0
-	golang.ngrok.com/ngrok v1.1.1
+	github.com/mymmrac/telego v0.24.1-0.20230607073113-e065325b3021
+	golang.ngrok.com/ngrok v1.2.0
 )
 
 require (

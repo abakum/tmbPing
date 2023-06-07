@@ -16,7 +16,6 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/xlab/closer"
-	"golang.ngrok.com/ngrok"
 )
 
 func main() {
@@ -64,7 +63,7 @@ func main() {
 		return
 	}
 	// bot.DeleteMyCommands(nil)
-	bh, nt, err := startH(bot)
+	bh, err := startH(bot)
 	if err != nil {
 		return
 	}
@@ -92,11 +91,8 @@ func main() {
 				ips.update(customer{})
 			case t := <-tacker.C:
 				stdo.Println("Tack at", t)
-				err = stopH(bot, bh, nt)
-				if err != nil {
-					return
-				}
-				bh, nt, err = startH(bot)
+				stopH(bot, bh)
+				bh, err = startH(bot)
 				if err != nil {
 					return
 				}
@@ -109,8 +105,7 @@ func main() {
 		if err != nil {
 			stdo.Println("Error", err)
 		}
-		err = stopH(bot, bh, nt)
-		stdo.Println("stopH", err)
+		stdo.Println("stopH", stopH(bot, bh))
 		stdo.Println("closer done <- true")
 		done <- true
 		stdo.Println("closer ips.close")
@@ -119,38 +114,31 @@ func main() {
 	})
 	closer.Hold()
 }
-func stopH(bot *tg.Bot, bh *th.BotHandler, nt *ngrok.Tunnel) (err error) {
-	//bh.Stop
-	//bot.StopWebhook
-	//bot.DeleteWebhook
-	//Session().Close()
+func stopH(bot *tg.Bot, bh *th.BotHandler) (err error) {
 	if bh != nil {
 		bh.Stop()
 		stdo.Println("bh.Stop")
 	}
-	if nt != nil {
-		err = (*nt).Session().Close()
-		stdo.Println("Session().Close", err)
-	}
 	if bot != nil {
-		if bot.IsRunningWebhook() {
-			err = bot.StopWebhook()
-			stdo.Println("StopWebhook", err)
-		}
 		err = bot.DeleteWebhook(&tg.DeleteWebhookParams{
 			DropPendingUpdates: false,
 		})
 		stdo.Println("DeleteWebhook", err)
+
+		if bot.IsRunningWebhook() {
+			stdo.Println("IsRunningWebhook")
+			err = bot.StopWebhook()
+			stdo.Println("StopWebhook", err)
+		}
 	}
 	return
 }
 
-func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
+func startH(bot *tg.Bot) (*th.BotHandler, error) {
 	var (
 		endPoint = "/" + fmt.Sprint(time.Now().Format("2006010215040501"))
-		secret   = endPoint[rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(endPoint)-3):]
+		secret   = endPoint[rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(endPoint)-3)+1:]
 		updates  <-chan tg.Update
-		nt       *ngrok.Tunnel
 	)
 	//try use ngrok.exe client with web interface for debuging
 	publicURL, forwardsTo, err := ngrokWeb()
@@ -169,7 +157,7 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 				forwardsTo = "https://localhost"
 			}
 			if os.Getenv("NGROK_AUTHTOKEN") != "" {
-				updates, nt, err = UpdatesWithNgrok(bot, secret, forwardsTo, endPoint)
+				updates, err = UpdatesWithNgrok(bot, secret, forwardsTo, endPoint)
 			} else {
 				updates, err = UpdatesWithSecret(bot, secret, forwardsTo, endPoint)
 			}
@@ -180,20 +168,20 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 		updates, err = UpdatesWithSecret(bot, secret, publicURL, endPoint) //publicURL from ngrokWeb
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	go func() {
 		err = bot.StartWebhook(webHookAddress(forwardsTo))
 		if err != nil {
-			stdo.Println("StartWebhook", err)
+			stdo.Println("After StartWebhook", err)
 			closer.Close()
 		}
 	}()
 
 	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	//AnyCallbackQueryWithMessage
@@ -212,7 +200,7 @@ func startH(bot *tg.Bot) (*th.BotHandler, *ngrok.Tunnel, error) {
 	bh.Handle(bhEasterEgg, anyWithMatch(reYYYYMMDD))
 
 	go bh.Start()
-	return bh, nt, nil
+	return bh, nil
 }
 
 func webHookAddress(forwardsTo string) (hp string) {

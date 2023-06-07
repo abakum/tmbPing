@@ -36,23 +36,23 @@ func ngrokWeb() (string, string, error) {
 	}
 	resp, err := http.Get("http://" + web_addr + "/api/tunnels")
 	if err != nil {
-		stdo.Println("ngrokUrlAddr http.Get error:", err)
+		stdo.Println("ngrokWeb http.Get error:", err)
 		return "", "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		err = fmt.Errorf("ngrokUrlAddr http.Get resp.StatusCode: %v", resp.StatusCode)
+		err = fmt.Errorf("ngrokWeb http.Get resp.StatusCode: %v", resp.StatusCode)
 		stdo.Println(err)
 		return "", "", err
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		stdo.Println("ngrokUrlAddr io.ReadAll error:", err)
+		stdo.Println("ngrokWeb io.ReadAll error:", err)
 		return "", "", err
 	}
 	err = json.Unmarshal(body, &client)
 	if err != nil {
-		stdo.Println("ngrokUrlAddr json.Unmarshal error:", err)
+		stdo.Println("ngrokWeb json.Unmarshal error:", err)
 		return "", "", err
 	}
 	for _, tunnel := range client.Tunnels {
@@ -60,7 +60,7 @@ func ngrokWeb() (string, string, error) {
 			return tunnel.PublicURL, tunnel.Config.Addr, nil
 		}
 	}
-	return "", "", fmt.Errorf("ngrokUrlAddr not found online client")
+	return "", "", fmt.Errorf("ngrokWeb not found online client")
 }
 
 func ngrokAPI(ctx context.Context, NGROK_API_KEY string) (string, string, error) {
@@ -72,20 +72,20 @@ func ngrokAPI(ctx context.Context, NGROK_API_KEY string) (string, string, error)
 	iter := client.List(nil)
 	err := iter.Err()
 	if err != nil {
-		stdo.Println("ngrokUrlTo tunnels.NewClient.List error:", err)
+		stdo.Println("ngrokAPI tunnels.NewClient.List error:", err)
 		return "", "", err
 	}
 	for iter.Next(ctx) {
 		err = iter.Err()
 		if err != nil {
-			stdo.Println("ngrokUrlTo tunnels.NewClient.Next error:", err)
+			stdo.Println("ngrokAPI tunnels.NewClient.Next error:", err)
 			return "", "", err
 		}
 		if true { //free version allow only one tunnel
 			return iter.Item().PublicURL, iter.Item().ForwardsTo, nil
 		}
 	}
-	return "", "", fmt.Errorf("ngrokUrlTo not found online client")
+	return "", "", fmt.Errorf("ngrokAPI not found online client")
 }
 
 func manInTheMiddle(bot *telego.Bot) bool {

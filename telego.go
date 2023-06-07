@@ -92,29 +92,29 @@ func UpdatesWithSecret(b *tg.Bot, secretToken, publicURL, endPoint string) (<-ch
 		URL:         publicURL + endPoint,
 		SecretToken: secretToken,
 	}
-	updates, err := b.UpdatesViaWebhook(endPoint,
+	return b.UpdatesViaWebhook(endPoint,
 		tg.WithWebhookServer(whs),
 		tg.WithWebhookSet(whp))
-	return updates, err
 }
 
 // UpdatesWithNgrok start ngrok.Tunnel with os.Getenv("NGROK_AUTHTOKEN") and SecretToken
 // for close ngrok.Tunnel use ngrok.Tunnel.Session().Close()
-func UpdatesWithNgrok(b *tg.Bot, secretToken, forwardsTo, endPoint string) (<-chan tg.Update, *ngrok.Tunnel, error) {
-	tun, err := ngrok.Listen(context.Background(), nc.HTTPEndpoint(
+func UpdatesWithNgrok(b *tg.Bot, secretToken, forwardsTo, endPoint string) (<-chan tg.Update, error) {
+	var err error
+	ctx, ca := context.WithCancel(context.Background())
+	tun, err := ngrok.Listen(ctx, nc.HTTPEndpoint(
 		nc.WithForwardsTo(forwardsTo)),
 		ngrok.WithAuthtokenFromEnv(),
 	)
-	if err != nil {
-		return nil, nil, err
-	}
-	publicURL := tun.URL()
 	defer func() {
 		if err != nil {
-			err = tun.Session().Close()
-			b.Logger().Errorf("error close session of ngrok tunnel %v", err)
+			ca()
 		}
 	}()
+	if err != nil {
+		return nil, err
+	}
+	publicURL := tun.URL()
 	whs := tg.FastHTTPWebhookServer{
 		Logger:      b.Logger(),
 		Server:      &fasthttp.Server{},
@@ -129,14 +129,19 @@ func UpdatesWithNgrok(b *tg.Bot, secretToken, forwardsTo, endPoint string) (<-ch
 		Server: whs,
 		// Override default start func to use Ngrok tunnel
 		StartFunc: func(_ string) error {
-			return whs.Server.Serve(tun)
+			stdo.Println("StartFunc")
+			err := whs.Server.Serve(tun) //always return error
+			stdo.Println("Serve", err)
+			return nil // if return error then tg.webhook.go:195 call panic: close of closed channel
+		},
+		// Override default stop func to close Ngrok tunnel
+		StopFunc: func(ctx context.Context) error {
+			stdo.Println("StopFunc")
+			ca()
+			return whs.Server.ShutdownWithContext(ctx)
 		},
 	}
-	updates, err := b.UpdatesViaWebhook(endPoint,
+	return b.UpdatesViaWebhook(endPoint,
 		tg.WithWebhookServer(fws),
 		tg.WithWebhookSet(whp))
-	if err != nil {
-		return nil, nil, err
-	}
-	return updates, &tun, nil
 }

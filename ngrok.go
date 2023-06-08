@@ -9,50 +9,48 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"time"
 
 	"github.com/mymmrac/telego"
 	"github.com/ngrok/ngrok-api-go/v5"
 	"github.com/ngrok/ngrok-api-go/v5/tunnels"
 )
 
-func ngrokWeb() (string, string, error) {
-	web_addr := os.Getenv("web_addr")
-	if web_addr == "" {
-		web_addr = "localhost:4040"
-	}
+func ngrokWeb() (publicURL string, forwardsTo string, err error) {
+	web_addr := Getenv("web_addr", "localhost:4040")
 	var client struct {
 		Tunnels []struct {
-			Name      string `json:"name"`
-			ID        string `json:"ID"`
-			URI       string `json:"uri"`
+			// Name      string `json:"name"`
+			// ID        string `json:"ID"`
+			// URI       string `json:"uri"`
 			PublicURL string `json:"public_url"`
-			Proto     string `json:"proto"`
-			Config    struct {
-				Addr    string `json:"addr"`
-				Inspect bool   `json:"inspect"`
+			// Proto     string `json:"proto"`
+			Config struct {
+				Addr string `json:"addr"`
+				// Inspect bool   `json:"inspect"`
 			} `json:"config"`
 		} `json:"tunnels"`
-		URI string `json:"uri"`
+		// URI string `json:"uri"`
 	}
 	resp, err := http.Get("http://" + web_addr + "/api/tunnels")
 	if err != nil {
-		stdo.Println("ngrokWeb http.Get error:", err)
+		stdo.Println(src(8), err)
 		return "", "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		err = fmt.Errorf("ngrokWeb http.Get resp.StatusCode: %v", resp.StatusCode)
-		stdo.Println(err)
+		err = fmt.Errorf("http.Get resp.StatusCode: %v", resp.StatusCode)
+		stdo.Println(src(8), err)
 		return "", "", err
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		stdo.Println("ngrokWeb io.ReadAll error:", err)
+		stdo.Println(src(8), err)
 		return "", "", err
 	}
 	err = json.Unmarshal(body, &client)
 	if err != nil {
-		stdo.Println("ngrokWeb json.Unmarshal error:", err)
+		stdo.Println(src(8), err)
 		return "", "", err
 	}
 	for _, tunnel := range client.Tunnels {
@@ -60,32 +58,44 @@ func ngrokWeb() (string, string, error) {
 			return tunnel.PublicURL, tunnel.Config.Addr, nil
 		}
 	}
-	return "", "", fmt.Errorf("ngrokWeb not found online client")
+	return "", "", fmt.Errorf("not found online client")
 }
 
-func ngrokAPI(ctx context.Context, NGROK_API_KEY string) (string, string, error) {
+func ngrokAPI() (publicURL string, forwardsTo string, err error) {
+	NGROK_API_KEY := os.Getenv("NGROK_API_KEY")
+	if NGROK_API_KEY == "" {
+		err = fmt.Errorf("not NGROK_API_KEY in env")
+		stdo.Println(src(8), err)
+		return "", "", err
+	}
+
 	// construct the api client
 	clientConfig := ngrok.NewClientConfig(NGROK_API_KEY)
 
 	// list all online client
 	client := tunnels.NewClient(clientConfig)
 	iter := client.List(nil)
-	err := iter.Err()
+	err = iter.Err()
 	if err != nil {
-		stdo.Println("ngrokAPI tunnels.NewClient.List error:", err)
+		stdo.Println(src(8), err)
 		return "", "", err
 	}
+
+	ctx, ca := context.WithTimeout(context.Background(), time.Second*3)
+	defer ca()
 	for iter.Next(ctx) {
 		err = iter.Err()
 		if err != nil {
-			stdo.Println("ngrokAPI tunnels.NewClient.Next error:", err)
+			stdo.Println(src(8), err)
 			return "", "", err
 		}
 		if true { //free version allow only one tunnel
 			return iter.Item().PublicURL, iter.Item().ForwardsTo, nil
 		}
 	}
-	return "", "", fmt.Errorf("ngrokAPI not found online client")
+	err = fmt.Errorf("not found online client")
+	stdo.Println(src(8), err)
+	return "", "", err
 }
 
 func manInTheMiddle(bot *telego.Bot) bool {

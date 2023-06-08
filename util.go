@@ -1,5 +1,12 @@
 package main
 
+import (
+	"os"
+	"path"
+	"runtime/debug"
+	"strings"
+)
+
 func m2kv[K comparable, V any](m map[K]V) (keys []K, vals []V) {
 	keys = make([]K, 0, len(m))
 	vals = make([]V, 0, len(m))
@@ -40,4 +47,23 @@ func tf[V any](ok bool, t, f V) V {
 		return t
 	}
 	return f
+}
+
+func src(deep int) (s string) {
+	s = string(debug.Stack())
+	// for k, v := range strings.Split(s, "\n") {
+	// 	stdo.Println(k, v)
+	// }
+	s = strings.Split(s, "\n")[deep]
+	s = strings.Split(s, " +0x")[0]
+	_, s = path.Split(s)
+	return
+}
+
+func Getenv(key, val string) string {
+	s := os.Getenv(key)
+	if s == "" {
+		return val
+	}
+	return s
 }

@@ -64,7 +64,7 @@ func la(t time.Time) (years []string) {
 		} else {
 			v = ""
 		}
-		if i > f && c > 0 || c > 1 && i < 90 {
+		if i >= f && c > 0 || c > 1 && i < 90 {
 			years = append(years, fmt.Sprintf("#%d%s %s%s%s%s", bd.Year(), yl, w, p, z, v))
 			if i > f && c > 0 {
 				fc++

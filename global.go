@@ -10,6 +10,7 @@ import (
 	"time"
 
 	tg "github.com/mymmrac/telego"
+	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
@@ -48,6 +49,7 @@ var (
 	}
 	ikbsf int
 	wg    sync.WaitGroup
+	bh    *th.BotHandler
 )
 
 type customer struct {

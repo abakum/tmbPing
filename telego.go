@@ -169,7 +169,7 @@ func addressWebHook(forwardsTo string) (hp string) {
 	hp = strings.TrimPrefix(forwardsTo, ":")
 	_, err := strconv.Atoi(hp)
 	if err == nil {
-		hp = "localhost:" + hp
+		hp = ":" + hp
 	}
 	for k, v := range map[string]string{
 		"http://":  ":80",

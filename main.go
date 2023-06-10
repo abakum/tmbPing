@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -20,6 +21,17 @@ func main() {
 		err error
 	)
 	defer closer.Close()
+	closer.Bind(func() {
+		if err != nil {
+			stdo.Println("Error", err)
+		}
+		stdo.Println("stopH", stopH(bot, bh))
+		stdo.Println("closer done <- true")
+		done <- true
+		stdo.Println("closer ips.close")
+		ips.close()
+		wg.Wait()
+	})
 	ul, err = jibber_jabber.DetectLanguage()
 	if err != nil {
 		ul = "en"
@@ -43,22 +55,22 @@ func main() {
 	}
 	stdo.Println(filepath.FromSlash(tmbPingJson))
 
-	token, ok := os.LookupEnv("TOKEN")
-	if !ok {
-		err = fmt.Errorf(dic.add(ul,
-			"en:set TOKEN=BOT_TOKEN",
-			"ru:Присвойте BOT_TOKEN переменной окружения TOKEN",
-		))
-		return
-	}
-	bot, err = tg.NewBot(token, tg.WithDefaultDebugLogger())
+	bot, err = tg.NewBot(os.Getenv("TOKEN"), tg.WithDefaultDebugLogger())
 	if err != nil {
+		if errors.Is(err, tg.ErrInvalidToken) {
+			err = fmt.Errorf(dic.add(ul,
+				"en:set TOKEN=BOT_TOKEN",
+				"ru:Присвойте BOT_TOKEN переменной окружения TOKEN",
+			))
+		}
 		return
 	}
+
 	me, err = bot.GetMe()
 	if err != nil {
 		return
 	}
+
 	// bot.DeleteMyCommands(nil)
 	bh, err := startH(bot)
 	if err != nil {
@@ -98,17 +110,6 @@ func main() {
 	}()
 
 	loader()
-	closer.Bind(func() {
-		if err != nil {
-			stdo.Println("Error", err)
-		}
-		stdo.Println("stopH", stopH(bot, bh))
-		stdo.Println("closer done <- true")
-		done <- true
-		stdo.Println("closer ips.close")
-		ips.close()
-		wg.Wait()
-	})
 	stdo.Println(ngrokAPI())
 	closer.Hold()
 }

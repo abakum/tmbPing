@@ -34,23 +34,23 @@ func ngrokWeb() (publicURL string, forwardsTo string, err error) {
 	}
 	resp, err := http.Get("http://" + web_addr + "/api/tunnels")
 	if err != nil {
-		stdo.Println(src(8), err)
+		let.Println(src(8), err)
 		return "", "", err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		err = fmt.Errorf("http.Get resp.StatusCode: %v", resp.StatusCode)
-		stdo.Println(src(8), err)
+		ltf.Println(src(8), err)
 		return "", "", err
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		stdo.Println(src(8), err)
+		let.Println(src(8), err)
 		return "", "", err
 	}
 	err = json.Unmarshal(body, &client)
 	if err != nil {
-		stdo.Println(src(8), err)
+		let.Println(src(8), err)
 		return "", "", err
 	}
 	for _, tunnel := range client.Tunnels {
@@ -65,7 +65,7 @@ func ngrokAPI() (publicURL string, forwardsTo string, err error) {
 	NGROK_API_KEY := os.Getenv("NGROK_API_KEY")
 	if NGROK_API_KEY == "" {
 		err = fmt.Errorf("not NGROK_API_KEY in env")
-		stdo.Println(src(8), err)
+		ltf.Println(src(8), err)
 		return "", "", err
 	}
 
@@ -77,7 +77,7 @@ func ngrokAPI() (publicURL string, forwardsTo string, err error) {
 	iter := client.List(nil)
 	err = iter.Err()
 	if err != nil {
-		stdo.Println(src(8), err)
+		let.Println(src(8), err)
 		return "", "", err
 	}
 
@@ -86,7 +86,7 @@ func ngrokAPI() (publicURL string, forwardsTo string, err error) {
 	for iter.Next(ctx) {
 		err = iter.Err()
 		if err != nil {
-			stdo.Println(src(8), err)
+			let.Println(src(8), err)
 			return "", "", err
 		}
 		if true { //free version allow only one tunnel
@@ -94,7 +94,7 @@ func ngrokAPI() (publicURL string, forwardsTo string, err error) {
 		}
 	}
 	err = fmt.Errorf("not found online client")
-	stdo.Println(src(8), err)
+	ltf.Println(src(8), err)
 	return "", "", err
 }
 
@@ -104,7 +104,7 @@ func manInTheMiddle(bot *telego.Bot) bool {
 	if err != nil {
 		return false
 	}
-	stdo.Printf("Webhook Info: %+v\n", info)
+	// stdo.Printf("Webhook Info: %+v\n", info)
 	if info.IPAddress == "" || info.URL == "" {
 		return false
 	}
@@ -123,6 +123,6 @@ func manInTheMiddle(bot *telego.Bot) bool {
 			return false
 		}
 	}
-	stdo.Printf("manInTheMiddle GetWebhookInfo.IPAddress: %v but GetWebhookInfo.URL ip:%v\n", info.IPAddress, ips)
+	ltf.Printf("manInTheMiddle GetWebhookInfo.IPAddress: %v but GetWebhookInfo.URL ip:%v\n", info.IPAddress, ips)
 	return true
 }

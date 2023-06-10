@@ -38,15 +38,15 @@ func worker(ip string, ch cCustomer) {
 				if i == 0 {
 					cu.Tm.From.FirstName = status
 					cu.Tm.Date = deadline.Unix()
-					stdo.Println("saved ", ip, status, deadline)
+					ltf.Println("saved ", ip, status, deadline)
 				}
 				save <- cu
 			}
-			stdo.Println("done", ip)
+			ltf.Println("done", ip)
 			return
 		case cust, ok := <-ch:
 			if !ok {
-				stdo.Println("channel closed", ip)
+				ltf.Println("channel closed", ip)
 				return
 			}
 			if cust.Tm == nil { //update
@@ -63,7 +63,7 @@ func worker(ip string, ch cCustomer) {
 						// if tsX == "" || strings.HasSuffix(status, tsX) || strings.HasPrefix(status, tsX) || (strings.HasPrefix(status, "❗") && tsX == "⁉️") {
 						if tsX == "" || strings.HasSuffix(status, tsX) || strings.HasPrefix(status, tsX) || (strings.HasPrefix(status, "❗") && tsX == "❗") {
 							for _, cu := range cus {
-								stdo.Println("bot.DeleteMessage", cu)
+								ltf.Println("bot.DeleteMessage", cu)
 								re := cu.Reply
 								if re != nil {
 									// bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID})
@@ -78,18 +78,18 @@ func worker(ip string, ch cCustomer) {
 				if cust.Cmd == ip && cust.Tm.Date > 0 {
 					status = cust.Tm.From.FirstName
 					deadline = time.Unix(cust.Tm.Date, 0)
-					stdo.Println("loaded ", ip, status, deadline)
+					ltf.Println("loaded ", ip, status, deadline)
 				}
 				cus = append(cus, cust)
 			}
 			statusOld = status
-			stdo.Println(ip, cust, len(ch), status, time.Now().Before(deadline))
+			ltf.Println(ip, cust, len(ch), status, time.Now().Before(deadline))
 			if time.Now().Before(deadline) {
 				status, err = ping(ip)
 				if err != nil {
 					// status = "⁉️"
 					status = "❗"
-					stdo.Println("ping", ip, err)
+					ltf.Println("ping", ip, err)
 					//return
 				}
 			} else {
@@ -99,7 +99,7 @@ func worker(ip string, ch cCustomer) {
 			}
 			for i, cu := range cus {
 				re := cu.Reply
-				stdo.Println(i, fcRfRc(cu.Tm), ip, fcRfRc(re), status, statusOld)
+				ltf.Println(i, fcRfRc(cu.Tm), ip, fcRfRc(re), status, statusOld)
 				if re == nil || status != statusOld {
 					if re != nil {
 						// bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID})

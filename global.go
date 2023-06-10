@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -15,7 +16,11 @@ import (
 )
 
 const (
-	numFL = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
+	numFL     = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
+	ansiReset = "\u001B[0m"
+	ansiRed   = "\u001B[41m"
+	// redErr    = ansiRed + "Err" + ansiReset
+	BUG = ansiRed + "Ж" + ansiReset
 )
 
 var (
@@ -25,7 +30,10 @@ var (
 	bot         *tg.Bot
 	refresh     = time.Second * 60
 	dd          = time.Hour * 8
-	stdo        = log.New(os.Stdout, "", log.Lshortfile|log.Ltime)
+	letf        = log.New(os.Stdout, BUG, log.Ltime|log.Lshortfile)
+	ltf         = log.New(os.Stdout, " ", log.Ltime|log.Lshortfile)
+	let         = log.New(os.Stdout, BUG, log.Ltime)
+	lt          = log.New(os.Stdout, " ", log.Ltime)
 	save        = make(cCustomer, 1)
 	saveDone    = make(chan bool, 1)
 	tmbPingJson = "tmbPing.json"
@@ -71,12 +79,12 @@ func (s *sCustomer) close() {
 	s.Unlock()
 	if len(s.mcCustomer) == 0 {
 		saveDone <- true
-		stdo.Println("sCustomer.close saveDone <- true")
+		ltf.Println("sCustomer.close saveDone <- true")
 	}
 }
 
 func (s *sCustomer) del(ip string, closed bool) {
-	stdo.Println("sCustomer.del ", ip)
+	ltf.Println("sCustomer.del ", ip)
 	s.Lock()
 	defer s.Unlock()
 	if !closed {
@@ -90,12 +98,12 @@ func (s *sCustomer) del(ip string, closed bool) {
 		defer ticker.Reset(dd)
 		if s.save {
 			saveDone <- true
-			stdo.Println("del saveDone <- true")
+			ltf.Println("del saveDone <- true")
 		}
 	}
 }
 func (s *sCustomer) add(ip string) (ch cCustomer) {
-	stdo.Println("sCustomer.add ", ip)
+	ltf.Println("sCustomer.add ", ip)
 	ch = make(cCustomer, 10)
 	go worker(ip, ch)
 	s.Lock()
@@ -108,11 +116,11 @@ func (s *sCustomer) add(ip string) (ch cCustomer) {
 }
 
 func (s *sCustomer) write(ip string, c customer) {
-	stdo.Println("sCustomer.write ", ip, c)
+	ltf.Println("sCustomer.write ", ip, c)
 	defer func() {
 		// recover from panic caused by writing to a closed channel
 		if err := recover(); err != nil {
-			stdo.Println("sCustomer.write error:", err)
+			letf.Println("sCustomer.write error:", err)
 			s.del(ip, true)
 			return
 		}
@@ -127,7 +135,7 @@ func (s *sCustomer) write(ip string, c customer) {
 	}
 }
 func (s *sCustomer) read(ip string) (ok bool) {
-	stdo.Println("sCustomer.read ", ip)
+	ltf.Println("sCustomer.read ", ip)
 	s.RLock()
 	defer s.RUnlock()
 	_, ok = s.mcCustomer[ip]
@@ -160,7 +168,7 @@ func (a AAA) allowed(ChatID int64) bool {
 			return true
 		}
 	}
-	stdo.Println(s, "not in", a)
+	ltf.Println(s, "not in", a)
 	return false
 }
 
@@ -197,4 +205,25 @@ func (m mss) add(key string, vals ...string) (val string) {
 		val = a0
 	}
 	return
+}
+
+type Logger struct{}
+
+func woToken(format string, args ...any) (s string) {
+	s = src(10) + " " + fmt.Sprintf(format, args...)
+	btStart := strings.Index(s, "/bot") + 4
+	if btStart > 4-1 {
+		btLen := strings.Index(s[btStart:], "/")
+		if btLen > 0 {
+			s = s[:btStart] + s[btStart+btLen:]
+		}
+	}
+	return
+}
+func (Logger) Debugf(format string, args ...any) {
+	lt.Print(woToken(format, args...))
+}
+
+func (Logger) Errorf(format string, args ...any) {
+	let.Print(woToken(format, args...))
 }

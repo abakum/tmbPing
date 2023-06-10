@@ -23,12 +23,12 @@ func main() {
 	defer closer.Close()
 	closer.Bind(func() {
 		if err != nil {
-			stdo.Println("Error", err)
+			letf.Println(err)
 		}
-		stdo.Println("stopH", stopH(bot, bh))
-		stdo.Println("closer done <- true")
+		ltf.Println("stopH", stopH(bot, bh))
+		ltf.Println("closer done <- true")
 		done <- true
-		stdo.Println("closer ips.close")
+		ltf.Println("closer ips.close")
 		ips.close()
 		wg.Wait()
 	})
@@ -44,7 +44,7 @@ func main() {
 		), os.Args[0])
 		return
 	} else {
-		stdo.Println(dic.add(ul,
+		ltf.Println(dic.add(ul,
 			"en:Allowed ChatID:",
 			"ru:Разрешённые ChatID:",
 		), chats)
@@ -53,9 +53,11 @@ func main() {
 	if err == nil {
 		tmbPingJson = filepath.Join(ex, tmbPingJson)
 	}
-	stdo.Println(filepath.FromSlash(tmbPingJson))
+	ltf.Println(filepath.FromSlash(tmbPingJson))
 
-	bot, err = tg.NewBot(os.Getenv("TOKEN"), tg.WithDefaultDebugLogger())
+	bot, err = tg.NewBot(os.Getenv("TOKEN"), tg.WithLogger(tg.Logger(Logger{}))) // tg.WithDefaultDebugLogger()
+	// bot, err = tg.NewBot(os.Getenv("TOKEN"))
+
 	if err != nil {
 		if errors.Is(err, tg.ErrInvalidToken) {
 			err = fmt.Errorf(dic.add(ul,
@@ -92,15 +94,15 @@ func main() {
 		for {
 			select {
 			case <-done:
-				stdo.Println("Ticker done")
+				ltf.Println("Ticker done")
 				done <- true
 				return
 			case t := <-ticker.C:
-				stdo.Println("Tick at", t)
+				ltf.Println("Tick at", t)
 				ips.update(customer{})
 			case t := <-tacker.C:
-				stdo.Println("Tack at", t)
-				stdo.Println("stopH", stopH(bot, bh))
+				ltf.Println("Tack at", t)
+				ltf.Println("stopH", stopH(bot, bh))
 				bh, err = startH(bot)
 				if err != nil {
 					return
@@ -109,13 +111,16 @@ func main() {
 		}
 	}()
 
-	loader()
-	stdo.Println(ngrokAPI())
+	err = loader()
+	if err != nil {
+		return
+	}
+	ltf.Println(ngrokAPI())
 	closer.Hold()
 }
 func stopH(bot *tg.Bot, bh *th.BotHandler) (err error) {
 	if bh != nil {
-		stdo.Println("bh.Stop")
+		ltf.Println("bh.Stop")
 		bh.Stop()
 	}
 	if bot != nil {
@@ -123,11 +128,11 @@ func stopH(bot *tg.Bot, bh *th.BotHandler) (err error) {
 		err = bot.DeleteWebhook(&tg.DeleteWebhookParams{
 			DropPendingUpdates: false,
 		})
-		stdo.Println("DeleteWebhook", err)
+		ltf.Println("DeleteWebhook", err)
 
 		if bot.IsRunningWebhook() {
 			err = bot.StopWebhook()
-			stdo.Println("StopWebhook", err)
+			ltf.Println("StopWebhook", err)
 		}
 	}
 	return
@@ -171,7 +176,7 @@ func bhAnyWithMatch(bot *tg.Bot, update tg.Update) {
 	}
 	ok, ups := allowed(ul, ctm.From.ID, ctm.Chat.ID)
 	keys, _ := set(reIP.FindAllString(tc, -1))
-	stdo.Println("bh.Handle anyWithIP", keys, ctm)
+	ltf.Println("bh.Handle anyWithIP", keys, ctm)
 	if ok {
 		for _, ip := range keys {
 			ips.write(ip, customer{Tm: ctm})
@@ -205,7 +210,7 @@ func bhEasterEgg(bot *tg.Bot, update tg.Update) {
 		return
 	}
 	keys, _ := set(reYYYYMMDD.FindAllString(tc, -1))
-	stdo.Println("bh.Handle anyWithYYYYMMDD", keys)
+	ltf.Println("bh.Handle anyWithYYYYMMDD", keys)
 	for _, key := range keys {
 		fss := reYYYYMMDD.FindStringSubmatch(key)
 		bd, err := time.ParseInLocation("20060102150405", strings.Join(fss[2:], "")+"120000", time.Local)
@@ -298,7 +303,7 @@ func bhAnyCommand(bot *tg.Bot, update tg.Update) {
 		if strings.HasPrefix(tm.Text, p) {
 			ds, err := base64.StdEncoding.DecodeString(strings.Trim(strings.TrimPrefix(tm.Text, p), " "))
 			if err == nil {
-				stdo.Println(string(ds))
+				ltf.Println(string(ds))
 				tm.Text = p + string(ds)
 				switch {
 				case reYYYYMMDD.MatchString(tm.Text):
@@ -354,7 +359,7 @@ func bhNewMember(bot *tg.Bot, update tg.Update) {
 		return
 	}
 	for _, nu := range tm.NewChatMembers {
-		stdo.Println(nu.ID)
+		ltf.Println(nu.ID)
 		bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
 			tu.Entity(dic.add(ul,
 				"en:Hello villagers!",

@@ -57,6 +57,7 @@ func src(deep int) (s string) {
 	s = strings.Split(s, "\n")[deep]
 	s = strings.Split(s, " +0x")[0]
 	_, s = path.Split(s)
+	s += ":"
 	return
 }
 

@@ -10,23 +10,24 @@ type config struct {
 	C *customers
 }
 
-func loader() {
+func loader() (err error) {
 	cus := customers{}
 	conf := config{&dic, &cus}
 	bytes, err := os.ReadFile(tmbPingJson)
 	if err != nil {
-		stdo.Println(err)
+		let.Println(src(8), err)
 		return
 	}
 	err = json.Unmarshal(bytes, &conf)
 	if err != nil {
-		stdo.Println(err)
+		let.Println(src(8), err)
 		return
 	}
 	for _, cu := range cus {
-		stdo.Println(cu)
+		ltf.Println(cu)
 		ips.write(cu.Cmd, cu)
 	}
+	return
 }
 
 func saver() {
@@ -36,18 +37,18 @@ func saver() {
 	for {
 		select {
 		case <-saveDone:
-			stdo.Println(cus)
+			ltf.Println(cus)
 			bytes, err := json.Marshal(conf)
 			if err != nil {
-				stdo.Println(err)
+				let.Println(src(8), err)
 				return
 			}
 			err = os.WriteFile(tmbPingJson, bytes, 0644)
 			if err != nil {
-				stdo.Println(err)
+				let.Println(src(8), err)
 				return
 			}
-			stdo.Println("saver done")
+			ltf.Println("saver done")
 			return
 		case cu, ok := <-save:
 			if ok {
@@ -55,7 +56,7 @@ func saver() {
 				// bytes, _ := json.Marshal(cu)
 				// stdo.Printf("%s\n", bytes)
 			} else {
-				stdo.Println("saver channel closed")
+				ltf.Println("saver channel closed")
 				saveDone <- true
 			}
 		}

@@ -121,18 +121,19 @@ func main() {
 	}()
 
 	// Loop through all updates when they came
-	for update := range updates {
-		fmt.Printf("Update: %+v\n", update)
-		// Break loop on /stop command
-		if update.Message != nil {
-			if strings.HasPrefix(update.Message.Text, "/stop") {
-				break
+	go func() {
+		for update := range updates {
+			fmt.Printf("Update: %+v\n", update)
+			// Break loop on /stop command
+			if update.Message != nil {
+				if strings.HasPrefix(update.Message.Text, "/stop") {
+					// If updates stop then send stop signal
+					sigs <- syscall.Signal(0xa)
+					break
+				}
 			}
 		}
-	}
-
-	// If updates stop then send stop signal
-	sigs <- syscall.SIGTERM
+	}()
 
 	// Wait for the stop process to be completed
 	<-done

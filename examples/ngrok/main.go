@@ -120,9 +120,11 @@ func main() {
 	}()
 
 	// Loop through all updates when they came
-	for update := range updates {
-		fmt.Printf("Update: %+v\n", update)
-	}
+	go func() {
+		for update := range updates {
+			fmt.Printf("Update: %+v\n", update)
+		}
+	}()
 
 	// Wait for the stop process to be completed
 	<-done

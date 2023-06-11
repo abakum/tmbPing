@@ -56,7 +56,8 @@ func main() {
 		}()
 
 		// Create a new Ngrok tunnel to connect local network with the Internet & have HTTPS domain for bot
-		tun, err := ngrok.Listen(context.Background(),
+		ctx, ca := context.WithCancel(context.Background())
+		tun, err := ngrok.Listen(ctx,
 			// Forward connections to localhost:8080
 			config.HTTPEndpoint(config.WithForwardsTo(":8080")),
 			// Authenticate into Ngrok using NGROK_AUTHTOKEN env (optional)
@@ -94,6 +95,10 @@ func main() {
 						bot.Logger().Errorf("Serve %s", err)
 					}
 					return err
+				},
+				StopFunc: func(_ context.Context) error {
+					ca() //need for NGROK_AUTHTOKEN in env
+					return nil
 				},
 			}),
 

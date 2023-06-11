@@ -33,9 +33,8 @@ func main() {
 	// Initialize done chan
 	done := make(chan struct{}, 1)
 
-	ctx := context.Background()
-
 	// Create a new Ngrok tunnel to connect local network with the Internet & have HTTPS domain for bot
+	ctx, ca := context.WithCancel(context.Background())
 	tun, err := ngrok.Listen(ctx,
 		// Forward connections to localhost:8080
 		config.HTTPEndpoint(config.WithForwardsTo(":8080")),
@@ -76,16 +75,9 @@ func main() {
 				return err
 			},
 			// Override default stop func to close Ngrok tunnel
-			StopFunc: func(ctx context.Context) error {
-				err := tun.CloseWithContext(ctx)
-				if err != nil {
-					bot.Logger().Errorf("CloseWithContext %s", err)
-				}
-				err = srv.Shutdown(ctx)
-				if err != nil {
-					bot.Logger().Errorf("Shutdown %s", err)
-				}
-				return err
+			StopFunc: func(_ context.Context) error {
+				ca() //need for NGROK_AUTHTOKEN in env
+				return nil
 			},
 		}),
 
@@ -124,10 +116,9 @@ func main() {
 	go func() {
 		for update := range updates {
 			fmt.Printf("Update: %+v\n", update)
-			// Break loop on /stop command
 			if update.Message != nil {
 				if strings.HasPrefix(update.Message.Text, "/stop") {
-					// If updates stop then send stop signal
+					// If command /stop then send stop signal
 					sigs <- syscall.Signal(0xa)
 					break
 				}

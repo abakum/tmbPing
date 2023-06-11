@@ -102,16 +102,17 @@ func UpdatesWithSecret(b *tg.Bot, secretToken, publicURL, endPoint string) (<-ch
 		tg.WithWebhookSet(whp))
 }
 
-// UpdatesWithNgrok start ngrok.Tunnel with NGROK_AUTHTOKEN in env and SecretToken
+// UpdatesWithNgrok start ngrok.Tunnel with NGROK_AUTHTOKEN in env (optional) and SecretToken
 func UpdatesWithNgrok(b *tg.Bot, secretToken, forwardsTo, endPoint string) (<-chan tg.Update, error) {
 	var (
 		err error
 		tun ngrok.Tunnel
 	)
+	// If NGROK_AUTHTOKEN in env and account is free and is already open need return
+	// else case ngrok.Listen hang
 	ct, ca := context.WithTimeout(context.Background(), time.Second)
 	sess, err := ngrok.Connect(ct, ngrok.WithAuthtokenFromEnv()) //even without NGROK_AUTHTOKEN in env
 	if err != nil {
-		letf.Println(sess.Warnings())
 		return nil, err
 	}
 	sess.Close()
@@ -149,21 +150,22 @@ func UpdatesWithNgrok(b *tg.Bot, secretToken, forwardsTo, endPoint string) (<-ch
 		StartFunc: func(address string) error {
 			ltf.Println("StartFunc", address)
 			err := whs.Server.Serve(tun) //always return error
-			if err != nil && err.Error() == "failed to accept connection: Tunnel closed" {
+			if err.Error() == "failed to accept connection: Tunnel closed" {
 				return nil
 			}
 			letf.Println("Serve", err)
-			return err // if return error then tg.webhook.go:195 call panic: close of closed channel
+			return err
 		},
 		// Override default stop func to close Ngrok tunnel
-		StopFunc: func(ctx context.Context) error {
-			ltf.Println("StopFunc", ctx)
-			ca()
-			err := whs.Server.ShutdownWithContext(ctx)
-			if err != nil {
-				letf.Println("ShutdownWithContext", err)
-			}
-			return err
+		StopFunc: func(_ context.Context) error {
+			ltf.Println("StopFunc")
+			ca() //need for NGROK_AUTHTOKEN in env
+			return nil
+			// err := whs.Server.ShutdownWithContext(ctx)
+			// if err != nil {
+			// 	letf.Println("ShutdownWithContext", err)
+			// }
+			// return err
 		},
 	}
 	return b.UpdatesViaWebhook(endPoint,

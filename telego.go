@@ -110,22 +110,22 @@ func UpdatesWithNgrok(b *tg.Bot, secretToken, forwardsTo, endPoint string) (<-ch
 	)
 	// If NGROK_AUTHTOKEN in env and account is free and is already open need return
 	// else case ngrok.Listen hang
-	ct, ca := context.WithTimeout(context.Background(), time.Second)
-	sess, err := ngrok.Connect(ct, ngrok.WithAuthtokenFromEnv()) //even without NGROK_AUTHTOKEN in env
+	ctx, ca := context.WithTimeout(context.Background(), time.Second)
+	sess, err := ngrok.Connect(ctx, ngrok.WithAuthtokenFromEnv()) //even without NGROK_AUTHTOKEN in env
 	if err != nil {
 		return nil, err
 	}
 	sess.Close()
 	ca()
 
-	ct, ca = context.WithCancel(context.Background())
+	ctx, ca = context.WithCancel(context.Background())
 	defer func() {
 		if err != nil {
 			ca()
 		}
 	}()
 	tun, err = ngrok.Listen(
-		ct,
+		ctx,
 		nc.HTTPEndpoint(nc.WithForwardsTo(forwardsTo)),
 		ngrok.WithAuthtokenFromEnv(),
 	)
@@ -161,11 +161,6 @@ func UpdatesWithNgrok(b *tg.Bot, secretToken, forwardsTo, endPoint string) (<-ch
 			ltf.Println("StopFunc")
 			ca() //need for NGROK_AUTHTOKEN in env
 			return nil
-			// err := whs.Server.ShutdownWithContext(ctx)
-			// if err != nil {
-			// 	letf.Println("ShutdownWithContext", err)
-			// }
-			// return err
 		},
 	}
 	return b.UpdatesViaWebhook(endPoint,

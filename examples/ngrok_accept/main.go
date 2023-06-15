@@ -41,9 +41,10 @@ func main() {
 		fmt.Println("Create a new Ngrok tunnel")
 		ctx, ca := context.WithCancel(context.Background())
 
-		// Forward connections to localhost:8080
 		tun, err := ngrok.Listen(ctx,
+			// Forward connections to localhost:8080
 			config.HTTPEndpoint(config.WithForwardsTo(":8080")),
+			// Authenticate into Ngrok using NGROK_AUTHTOKEN env (optional)
 			ngrok.WithAuthtokenFromEnv(),
 		)
 		if err != nil {
@@ -53,13 +54,12 @@ func main() {
 
 		// Handle stop signal (Ctrl+C) or restart
 		go func() {
-
 			// Wait for stop signal or restart
 			<-sigs
 
 			fmt.Println("Stopping...")
 
-			// Cancel ngrok tunnel
+			// Close ngrok tunnel
 			fmt.Println("Cancel ngrok.Listen")
 			ca()
 
@@ -79,9 +79,10 @@ func main() {
 		secret := tun.ID()
 
 		// Prepare fast HTTP server
+		srv := &fasthttp.Server{}
 		whs := telego.FastHTTPWebhookServer{
 			Logger:      bot.Logger(),
-			Server:      &fasthttp.Server{},
+			Server:      srv,
 			Router:      router.New(),
 			SecretToken: secret,
 		}
@@ -100,7 +101,6 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
 		bot.GetWebhookInfo()
 
 		// Accept connection from ngrok tunnel
@@ -113,7 +113,7 @@ func main() {
 				}
 				bot.Logger().Debugf("%s => %s", conn.RemoteAddr().String(), conn.LocalAddr().String())
 				go func() {
-					err := whs.Server.ServeConn(conn)
+					err := srv.ServeConn(conn)
 					if err != nil {
 						bot.Logger().Errorf("Server.ServeConn %v: %v", conn, err)
 					}
@@ -131,14 +131,16 @@ func main() {
 		for update := range updates {
 			fmt.Printf("Update: %+v\n", update)
 
-			// Restart ngrok tunnel on command /restart
 			if update.Message != nil {
+				// Restart ngrok tunnel on command /restart
 				if strings.HasPrefix(update.Message.Text, "/restart") {
 					restart = true
 					sigs <- syscall.Signal(0xa)
 					<-done
 					time.Sleep(time.Second) //Too Many Requests
 				}
+
+				// Stop bot on command /stop
 				if strings.HasPrefix(update.Message.Text, "/stop") {
 					sigs <- syscall.SIGTERM
 				}

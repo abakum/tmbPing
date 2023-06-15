@@ -34,10 +34,11 @@ func main() {
 	done := make(chan struct{}, 1)
 
 	// Create a new Ngrok tunnel to connect local network with the Internet & have HTTPS domain for bot
+	fmt.Println("Create a new Ngrok tunnel")
 	ctx, ca := context.WithCancel(context.Background())
 	tun, err := ngrok.Listen(ctx,
-		// Forward connections to localhost:8080
-		config.HTTPEndpoint(config.WithForwardsTo(":8080")),
+		// Forward connections to localhost:8080 (optional)
+		config.HTTPEndpoint(), //config.WithForwardsTo(":8080")
 		// Authenticate into Ngrok using NGROK_AUTHTOKEN env (optional)
 		ngrok.WithAuthtokenFromEnv(),
 	)
@@ -46,59 +47,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Prepare HTTP server
-	srv := &http.Server{}
-
-	// Set SecretToken - let there be a little more security
-	secret := "foobar"
-	// Get an update channel from webhook using Ngrok
-	updates, _ := bot.UpdatesViaWebhook("/bot"+bot.Token(),
-		// Set func server with http server inside that will be used to handle webhooks enstead fast http server
-		telego.WithWebhookServer(telego.FuncWebhookServer{
-			Server: telego.HTTPWebhookServer{
-				Logger:      bot.Logger(),
-				Server:      srv,
-				ServeMux:    http.NewServeMux(),
-				SecretToken: secret,
-			},
-			// Override default start func to use Ngrok tunnel
-			StartFunc: func(_ string) error {
-				bot.Logger().Debugf("Serve %s", tun.ForwardsTo())
-				err := srv.Serve(tun)
-				if err != nil {
-					if errors.Is(err, http.ErrServerClosed) {
-						bot.Logger().Debugf("serverClosed")
-						return nil
-					}
-					bot.Logger().Errorf("Serve %s", err)
-				}
-				return err
-			},
-			// Override default stop func to close Ngrok tunnel
-			StopFunc: func(_ context.Context) error {
-				ca() //need for NGROK_AUTHTOKEN in env
-				return nil
-			},
-		}),
-
-		// Calls SetWebhook before starting webhook and provide dynamic Ngrok tunnel URL
-		telego.WithWebhookSet(&telego.SetWebhookParams{
-			URL:         tun.URL() + "/bot" + bot.Token(),
-			SecretToken: secret,
-		}),
-	)
-
-	// Start server for receiving requests from the Telegram
-	go func() {
-		_ = bot.StartWebhook("")
-	}()
-
 	// Handle stop signal (Ctrl+C)
 	go func() {
 		// Wait for stop signal
 		<-sigs
 
 		fmt.Println("Stopping...")
+
+		// Close ngrok tunnel
+		fmt.Println("Cancel ngrok.Listen")
+		ca()
 
 		// Stop reviving updates from update channel and shutdown webhook server
 		bot.StopWebhook()
@@ -112,15 +70,63 @@ func main() {
 		done <- struct{}{}
 	}()
 
+	// Set SecretToken - let there be a little more security
+	secret := tun.ID()
+
+	// Prepare fast HTTP server
+	srv := &http.Server{}
+	fwhs := telego.FuncWebhookServer{
+		Server: telego.HTTPWebhookServer{
+			Logger:      bot.Logger(),
+			Server:      srv,
+			ServeMux:    http.NewServeMux(),
+			SecretToken: secret,
+		},
+		// Override default start func to use Ngrok tunnel
+		StartFunc: func(_ string) error {
+			bot.Logger().Debugf("Serve")
+			err := srv.Serve(tun)
+			if err != nil {
+				if errors.Is(err, http.ErrServerClosed) {
+					bot.Logger().Debugf("serverClosed")
+					return nil
+				}
+				bot.Logger().Errorf("Serve %s", err)
+			}
+			return err
+		},
+	}
+
+	// Get an update channel from webhook using Ngrok
+	updates, err := bot.UpdatesViaWebhook("/"+secret,
+		// Set func server with fast http server inside that will be used to handle webhooks
+		telego.WithWebhookServer(fwhs),
+
+		// Calls SetWebhook before starting webhook and provide dynamic Ngrok tunnel URL
+		telego.WithWebhookSet(&telego.SetWebhookParams{
+			URL:         tun.URL() + "/" + secret,
+			SecretToken: secret,
+		}),
+	)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	bot.GetWebhookInfo()
+
+	// Start server for receiving requests from the Telegram
+	go func() {
+		_ = bot.StartWebhook("")
+	}()
+
 	// Loop through all updates when they came
 	go func() {
 		for update := range updates {
 			fmt.Printf("Update: %+v\n", update)
 			if update.Message != nil {
+				// Stop bot on command /stop
 				if strings.HasPrefix(update.Message.Text, "/stop") {
-					// If command /stop then send stop signal
-					sigs <- syscall.Signal(0xa)
-					break
+					sigs <- syscall.SIGTERM
 				}
 			}
 		}

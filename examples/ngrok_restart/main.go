@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"golang.ngrok.com/ngrok"
 	"golang.ngrok.com/ngrok/config"
@@ -36,12 +37,31 @@ func main() {
 	for {
 		restart := false
 
+		// Create a new Ngrok tunnel to connect local network with the Internet & have HTTPS domain for bot
+		fmt.Println("Create a new Ngrok tunnel")
+		ctx, ca := context.WithCancel(context.Background())
+
+		tun, err := ngrok.Listen(ctx,
+			// Forward connections to localhost:8080 (optional)
+			config.HTTPEndpoint(), //config.WithForwardsTo(":8080")
+			// Authenticate into Ngrok using NGROK_AUTHTOKEN env (optional)
+			ngrok.WithAuthtokenFromEnv(),
+		)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
 		// Handle stop signal (Ctrl+C)
 		go func() {
 			// Wait for stop signal
 			<-sigs
 
 			fmt.Println("Stopping...")
+
+			// Close ngrok tunnel
+			fmt.Println("Cancel ngrok.Listen")
+			ca()
 
 			// Stop reviving updates from update channel and shutdown webhook server
 			bot.StopWebhook()
@@ -55,60 +75,48 @@ func main() {
 			done <- struct{}{}
 		}()
 
-		// Create a new Ngrok tunnel to connect local network with the Internet & have HTTPS domain for bot
-		ctx, ca := context.WithCancel(context.Background())
-		tun, err := ngrok.Listen(ctx,
-			// Forward connections to localhost:8080
-			config.HTTPEndpoint(), //config.WithForwardsTo(":8080")
-			// Authenticate into Ngrok using NGROK_AUTHTOKEN env (optional)
-			ngrok.WithAuthtokenFromEnv(),
+		// Set SecretToken - let there be a little more security
+		secret := tun.ID()
+
+		// Prepare fast HTTP server
+		srv := &fasthttp.Server{}
+		fwhs := telego.FuncWebhookServer{
+			Server: telego.FastHTTPWebhookServer{
+				Logger:      bot.Logger(),
+				Server:      srv,
+				Router:      router.New(),
+				SecretToken: secret,
+			},
+			// Override default start func to use Ngrok tunnel
+			StartFunc: func(_ string) error {
+				bot.Logger().Debugf("Serve")
+				err := srv.Serve(tun)
+				if err != nil {
+					if err.Error() == "failed to accept connection: Tunnel closed" {
+						bot.Logger().Debugf("serverClosed")
+						return nil
+					}
+					bot.Logger().Errorf("Serve %s", err)
+				}
+				return err
+			},
+		}
+
+		// Get an update channel from webhook using Ngrok
+		updates, err := bot.UpdatesViaWebhook("/"+secret,
+			// Set func server with fast http server inside that will be used to handle webhooks
+			telego.WithWebhookServer(fwhs),
+			// Calls SetWebhook before starting webhook and provide dynamic Ngrok tunnel URL
+			telego.WithWebhookSet(&telego.SetWebhookParams{
+				URL:         tun.URL() + "/" + secret,
+				SecretToken: secret,
+			}),
 		)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
-		// Prepare fast HTTP server
-		srv := &fasthttp.Server{}
-
-		// Set SecretToken - let there be a little more security
-		secret := "foobar"
-		// Get an update channel from webhook using Ngrok
-		updates, _ := bot.UpdatesViaWebhook("/bot"+bot.Token(),
-			// Set func server with fast http server inside that will be used to handle webhooks
-			telego.WithWebhookServer(telego.FuncWebhookServer{
-				Server: telego.FastHTTPWebhookServer{
-					Logger:      bot.Logger(),
-					Server:      srv,
-					Router:      router.New(),
-					SecretToken: secret,
-				},
-				// Override default start func to use Ngrok tunnel
-				StartFunc: func(address string) error {
-					bot.Logger().Debugf("Serve %s", address)
-					bot.Logger().Debugf(tun.ForwardsTo())
-					err := srv.Serve(tun)
-					if err != nil {
-						if err.Error() == "failed to accept connection: Tunnel closed" {
-							bot.Logger().Debugf("serverClosed")
-							return nil
-						}
-						bot.Logger().Errorf("Serve %s", err)
-					}
-					return err
-				},
-				StopFunc: func(_ context.Context) error {
-					ca() //need for NGROK_AUTHTOKEN in env
-					return nil
-				},
-			}),
-
-			// Calls SetWebhook before starting webhook and provide dynamic Ngrok tunnel URL
-			telego.WithWebhookSet(&telego.SetWebhookParams{
-				URL:         tun.URL() + "/bot" + bot.Token(),
-				SecretToken: secret,
-			}),
-		)
+		bot.GetWebhookInfo()
 
 		// Start server for receiving requests from the Telegram
 		go func() {
@@ -119,13 +127,18 @@ func main() {
 		for update := range updates {
 			fmt.Printf("Update: %+v\n", update)
 
-			// Restart ngrok tunnel on command /restart
 			if update.Message != nil {
+				// Restart ngrok tunnel on command /restart
 				if strings.HasPrefix(update.Message.Text, "/restart") {
 					restart = true
 					sigs <- syscall.Signal(0xa)
 					<-done
-					break
+					time.Sleep(time.Second) //Too Many Requests
+				}
+
+				// Stop bot on command /stop
+				if strings.HasPrefix(update.Message.Text, "/stop") {
+					sigs <- syscall.SIGTERM
 				}
 			}
 		}

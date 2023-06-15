@@ -18,9 +18,8 @@ import (
 const (
 	numFL     = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
 	ansiReset = "\u001B[0m"
-	ansiRed   = "\u001B[41m"
-	// redErr    = ansiRed + "Err" + ansiReset
-	BUG = ansiRed + "Ж" + ansiReset
+	ansiRedBG = "\u001B[41m"
+	BUG       = ansiRedBG + "Ж" + ansiReset
 )
 
 var (

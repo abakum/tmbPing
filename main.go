@@ -24,6 +24,7 @@ func main() {
 	closer.Bind(func() {
 		if err != nil {
 			letf.Println(err)
+			defer os.Exit(1)
 		}
 		ltf.Println("stopH", stopH(bot, bh))
 		ltf.Println("closer done <- true")

@@ -133,7 +133,8 @@ func main() {
 					restart = true
 					sigs <- syscall.Signal(0xa)
 					<-done
-					time.Sleep(time.Second) //Too Many Requests
+					// To prevent "Too Many Requests"
+					time.Sleep(time.Second)
 				}
 
 				// Stop bot on command /stop

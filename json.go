@@ -10,24 +10,22 @@ type config struct {
 	C *customers
 }
 
-func loader() (err error) {
+func loader() error {
 	cus := customers{}
 	conf := config{&dic, &cus}
 	bytes, err := os.ReadFile(tmbPingJson)
 	if err != nil {
-		let.Println(src(8), err)
-		return
+		return srcError(err)
 	}
 	err = json.Unmarshal(bytes, &conf)
 	if err != nil {
-		let.Println(src(8), err)
-		return
+		return srcError(err)
 	}
 	for _, cu := range cus {
 		ltf.Println(cu)
 		ips.write(cu.Cmd, cu)
 	}
-	return
+	return nil
 }
 
 func saver() {
@@ -40,15 +38,11 @@ func saver() {
 			ltf.Println(cus)
 			bytes, err := json.Marshal(conf)
 			if err != nil {
-				let.Println(src(8), err)
+				PrintOk("", err)
 				return
 			}
 			err = os.WriteFile(tmbPingJson, bytes, 0644)
-			if err != nil {
-				let.Println(src(8), err)
-				return
-			}
-			ltf.Println("saver done")
+			PrintOk("saver", err)
 			return
 		case cu, ok := <-save:
 			if ok {

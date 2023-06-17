@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -39,6 +41,7 @@ func main() {
 	// Note: Please keep in mind that default logger may expose sensitive information, use in development only
 	bot, err := telego.NewBot(botToken, telego.WithDefaultDebugLogger())
 	if err != nil {
+		err = srcError(err)
 		return
 	}
 
@@ -56,10 +59,11 @@ func main() {
 			ngrok.WithAuthtokenFromEnv(),
 		)
 		if err != nil {
+			err = srcError(err)
 			return
 		}
 
-		// Handle stop signal (Ctrl+C)
+		// Handle stop signal
 		cleanup = func() {
 			fmt.Println("Stopping...")
 
@@ -99,7 +103,8 @@ func main() {
 					}
 					bot.Logger().Errorf("Serve %s", err)
 				}
-				return err
+				// Restart ngrok tunnel
+				return srcError(err)
 			},
 		}
 
@@ -146,4 +151,31 @@ func main() {
 			break
 		}
 	}
+}
+
+// Get source of code
+func src(deep int) (s string) {
+	s = string(debug.Stack())
+	str := strings.Split(s, "\n")
+	if l := len(str); l <= deep {
+		deep = l - 1
+		for k, v := range str {
+			fmt.Println(k, v)
+		}
+	}
+	s = str[deep]
+	s = strings.Split(s, " +0x")[0]
+	_, s = path.Split(s)
+	s += ":"
+	return
+}
+
+// Wrap source of code and message to error
+func Errorf(format string, args ...any) error {
+	return fmt.Errorf(src(8)+" %w", fmt.Errorf(format, args...))
+}
+
+// Wrap source of code and error to error
+func srcError(err error) error {
+	return fmt.Errorf(src(8)+" %w", err)
 }

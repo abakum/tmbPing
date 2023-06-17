@@ -23,10 +23,10 @@ func main() {
 	defer closer.Close()
 	closer.Bind(func() {
 		if err != nil {
-			letf.Println(err)
+			let.Println(err)
 			defer os.Exit(1)
 		}
-		ltf.Println("stopH", stopH(bot, bh))
+		PrintOk("stopH", stopH(bot, bh))
 		ltf.Println("closer done <- true")
 		done <- true
 		ltf.Println("closer ips.close")
@@ -39,7 +39,7 @@ func main() {
 	}
 	chats = os.Args[1:]
 	if len(chats) == 0 {
-		err = fmt.Errorf(dic.add(ul,
+		err = Errorf(dic.add(ul,
 			"en:Usage: %s AllowedChatID1 AllowedChatID2 AllowedChatIDx\n",
 			"ru:Использование: %s РазрешённыйChatID1 РазрешённыйChatID2 РазрешённыйChatIDх\n",
 		), os.Args[0])
@@ -61,22 +61,25 @@ func main() {
 
 	if err != nil {
 		if errors.Is(err, tg.ErrInvalidToken) {
-			err = fmt.Errorf(dic.add(ul,
+			err = Errorf(dic.add(ul,
 				"en:set TOKEN=BOT_TOKEN",
 				"ru:Присвойте BOT_TOKEN переменной окружения TOKEN",
 			))
 		}
+		err = srcError(err)
 		return
 	}
 
 	me, err = bot.GetMe()
 	if err != nil {
+		err = srcError(err)
 		return
 	}
 
 	// bot.DeleteMyCommands(nil)
 	bh, err := startH(bot)
 	if err != nil {
+		err = srcError(err)
 		return
 	}
 
@@ -106,6 +109,7 @@ func main() {
 				ltf.Println("stopH", stopH(bot, bh))
 				bh, err = startH(bot)
 				if err != nil {
+					letf.Println(err)
 					return
 				}
 			}
@@ -114,6 +118,7 @@ func main() {
 
 	err = loader()
 	if err != nil {
+		err = srcError(err)
 		return
 	}
 	ltf.Println(ngrokAPI())
@@ -125,15 +130,14 @@ func stopH(bot *tg.Bot, bh *th.BotHandler) (err error) {
 		bh.Stop()
 	}
 	if bot != nil {
-		// stdo.Println("bot != nil")
 		err = bot.DeleteWebhook(&tg.DeleteWebhookParams{
 			DropPendingUpdates: false,
 		})
-		ltf.Println("DeleteWebhook", err)
+		PrintOk("DeleteWebhook", err)
 
 		if bot.IsRunningWebhook() {
 			err = bot.StopWebhook()
-			ltf.Println("StopWebhook", err)
+			PrintOk("StopWebhook", err)
 		}
 	}
 	return

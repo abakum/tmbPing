@@ -34,39 +34,33 @@ func ngrokWeb() (publicURL string, forwardsTo string, err error) {
 	}
 	resp, err := http.Get("http://" + web_addr + "/api/tunnels")
 	if err != nil {
-		let.Println(src(8), err)
-		return "", "", err
+		return "", "", srcError(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
 		err = fmt.Errorf("http.Get resp.StatusCode: %v", resp.StatusCode)
-		ltf.Println(src(8), err)
-		return "", "", err
+		return "", "", Errorf("http.Get resp.StatusCode: %v", resp.StatusCode)
 	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		let.Println(src(8), err)
-		return "", "", err
+		return "", "", srcError(err)
 	}
 	err = json.Unmarshal(body, &client)
 	if err != nil {
-		let.Println(src(8), err)
-		return "", "", err
+		return "", "", srcError(err)
 	}
 	for _, tunnel := range client.Tunnels {
 		if true { //free version allow only one tunnel
 			return tunnel.PublicURL, tunnel.Config.Addr, nil
 		}
 	}
-	return "", "", fmt.Errorf("not found online client")
+	return "", "", Errorf("not found online client")
 }
 
 func ngrokAPI() (publicURL string, forwardsTo string, err error) {
 	NGROK_API_KEY := os.Getenv("NGROK_API_KEY")
 	if NGROK_API_KEY == "" {
-		err = fmt.Errorf("not NGROK_API_KEY in env")
-		ltf.Println(src(8), err)
-		return "", "", err
+		return "", "", Errorf("not NGROK_API_KEY in env")
 	}
 
 	// construct the api client
@@ -77,8 +71,7 @@ func ngrokAPI() (publicURL string, forwardsTo string, err error) {
 	iter := client.List(nil)
 	err = iter.Err()
 	if err != nil {
-		let.Println(src(8), err)
-		return "", "", err
+		return "", "", srcError(err)
 	}
 
 	ctx, ca := context.WithTimeout(context.Background(), time.Second*3)
@@ -86,16 +79,13 @@ func ngrokAPI() (publicURL string, forwardsTo string, err error) {
 	for iter.Next(ctx) {
 		err = iter.Err()
 		if err != nil {
-			let.Println(src(8), err)
-			return "", "", err
+			return "", "", srcError(err)
 		}
 		if true { //free version allow only one tunnel
 			return iter.Item().PublicURL, iter.Item().ForwardsTo, nil
 		}
 	}
-	err = fmt.Errorf("not found online client")
-	ltf.Println(src(8), err)
-	return "", "", err
+	return "", "", Errorf("not found online client")
 }
 
 func manInTheMiddle(bot *telego.Bot) bool {
@@ -123,6 +113,6 @@ func manInTheMiddle(bot *telego.Bot) bool {
 			return false
 		}
 	}
-	ltf.Printf("manInTheMiddle GetWebhookInfo.IPAddress: %v but GetWebhookInfo.URL ip:%v\n", info.IPAddress, ips)
+	letf.Printf("manInTheMiddle GetWebhookInfo.IPAddress: %v but GetWebhookInfo.URL ip:%v\n", info.IPAddress, ips)
 	return true
 }

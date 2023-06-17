@@ -23,16 +23,16 @@ const (
 )
 
 var (
+	letf        = log.New(os.Stdout, BUG, log.Ltime|log.Lshortfile)
+	ltf         = log.New(os.Stdout, " ", log.Ltime|log.Lshortfile)
+	let         = log.New(os.Stdout, BUG, log.Ltime)
+	lt          = log.New(os.Stdout, " ", log.Ltime)
 	chats       AAA
 	done        = make(chan bool, 10)
 	ips         = sCustomer{mcCustomer: mcCustomer{}}
 	bot         *tg.Bot
 	refresh     = time.Second * 60
 	dd          = time.Hour * 8
-	letf        = log.New(os.Stdout, BUG, log.Ltime|log.Lshortfile)
-	ltf         = log.New(os.Stdout, " ", log.Ltime|log.Lshortfile)
-	let         = log.New(os.Stdout, BUG, log.Ltime)
-	lt          = log.New(os.Stdout, " ", log.Ltime)
 	save        = make(cCustomer, 1)
 	saveDone    = make(chan bool, 1)
 	tmbPingJson = "tmbPing.json"

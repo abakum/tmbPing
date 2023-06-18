@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -26,7 +27,7 @@ var (
 	ltf         = log.New(os.Stdout, " ", log.Ltime|log.Lshortfile)
 	let         = log.New(os.Stdout, BUG, log.Ltime)
 	lt          = log.New(os.Stdout, " ", log.Ltime)
-	chats       AAA
+	chats       = NewAAA()
 	done        = make(chan bool, 10)
 	ips         = sCustomer{mcCustomer: mcCustomer{}}
 	bot         *tg.Bot
@@ -93,7 +94,9 @@ func (s *sCustomer) del(ip string, closed bool) {
 	}
 	delete(s.mcCustomer, ip)
 	if len(s.mcCustomer) == 0 {
-		defer ticker.Reset(dd)
+		if ticker != nil {
+			defer ticker.Reset(dd)
+		}
 		if s.save {
 			saveDone <- true
 			ltf.Println("del saveDone <- true")
@@ -107,7 +110,9 @@ func (s *sCustomer) add(ip string) (ch cCustomer) {
 	s.Lock()
 	defer s.Unlock()
 	if len(s.mcCustomer) == 0 {
-		defer ticker.Reset(refresh)
+		if ticker != nil {
+			defer ticker.Reset(refresh)
+		}
 	}
 	s.mcCustomer[ip] = ch
 	return
@@ -167,6 +172,19 @@ func (a AAA) allowed(ChatID int64) bool {
 	}
 	ltf.Println(ChatID, "not in", a)
 	return false
+}
+
+func NewAAA() AAA {
+	chats := AAA{}
+	for _, s := range os.Args[1:] {
+		i, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			continue
+		}
+		chats = append(chats, i)
+	}
+	return chats
+
 }
 
 type mss map[string]string

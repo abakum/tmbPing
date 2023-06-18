@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
@@ -42,13 +41,6 @@ func main() {
 	ul, err = jibber_jabber.DetectLanguage()
 	if err != nil {
 		ul = "en"
-	}
-	for _, s := range os.Args[1:] {
-		i, err := strconv.ParseInt(s, 10, 64)
-		if err != nil {
-			continue
-		}
-		chats = append(chats, i)
 	}
 	if len(chats) == 0 {
 		err = Errorf(dic.add(ul,
@@ -328,9 +320,11 @@ func bhAnyCommand(bot *tg.Bot, update tg.Update) {
 		if tm.From != nil && chats[:1].allowed(tm.From.ID) {
 			p = "/restart"
 			if strings.HasPrefix(tm.Text, p) {
-				tacker.Reset(time.Millisecond * 100)
-				time.Sleep(time.Millisecond * 150)
-				tacker.Reset(time.Hour)
+				if tacker != nil {
+					tacker.Reset(time.Millisecond * 100)
+					time.Sleep(time.Millisecond * 150)
+					tacker.Reset(time.Hour)
+				}
 				return
 			}
 			p = "/stop"

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -27,6 +28,11 @@ func main() {
 			defer os.Exit(1)
 		}
 		PrintOk("stopH", stopH(bot, bh))
+		if bot != nil {
+			PrintOk("DeleteWebhook", bot.DeleteWebhook(&tg.DeleteWebhookParams{
+				DropPendingUpdates: false,
+			}))
+		}
 		ltf.Println("closer done <- true")
 		done <- true
 		ltf.Println("closer ips.close")
@@ -37,7 +43,13 @@ func main() {
 	if err != nil {
 		ul = "en"
 	}
-	chats = os.Args[1:]
+	for _, s := range os.Args[1:] {
+		i, err := strconv.ParseInt(s, 10, 64)
+		if err != nil {
+			continue
+		}
+		chats = append(chats, i)
+	}
 	if len(chats) == 0 {
 		err = Errorf(dic.add(ul,
 			"en:Usage: %s AllowedChatID1 AllowedChatID2 AllowedChatIDx\n",
@@ -79,7 +91,6 @@ func main() {
 	// bot.DeleteMyCommands(nil)
 	bh, err := startH(bot)
 	if err != nil {
-		err = srcError(err)
 		return
 	}
 
@@ -106,7 +117,7 @@ func main() {
 				ips.update(customer{})
 			case t := <-tacker.C:
 				ltf.Println("Tack at", t)
-				ltf.Println("stopH", stopH(bot, bh))
+				PrintOk("stopH", stopH(bot, bh))
 				bh, err = startH(bot)
 				if err != nil {
 					letf.Println(err)
@@ -118,29 +129,22 @@ func main() {
 
 	err = loader()
 	if err != nil {
-		err = srcError(err)
 		return
 	}
 	ltf.Println(ngrokAPI())
 	closer.Hold()
 }
-func stopH(bot *tg.Bot, bh *th.BotHandler) (err error) {
+func stopH(bot *tg.Bot, bh *th.BotHandler) error {
 	if bh != nil {
 		ltf.Println("bh.Stop")
 		bh.Stop()
 	}
 	if bot != nil {
-		err = bot.DeleteWebhook(&tg.DeleteWebhookParams{
-			DropPendingUpdates: false,
-		})
-		PrintOk("DeleteWebhook", err)
-
 		if bot.IsRunningWebhook() {
-			err = bot.StopWebhook()
-			PrintOk("StopWebhook", err)
+			return srcError(bot.StopWebhook())
 		}
 	}
-	return
+	return nil
 }
 
 func startH(bot *tg.Bot) (*th.BotHandler, error) {
@@ -151,7 +155,7 @@ func startH(bot *tg.Bot) (*th.BotHandler, error) {
 
 	bh, err := th.NewBotHandler(bot, updates)
 	if err != nil {
-		return nil, err
+		return nil, srcError(err)
 	}
 
 	//AnyCallbackQueryWithMessage
@@ -294,6 +298,7 @@ func bhReplyMessageIsMinus(bot *tg.Bot, update tg.Update) {
 	re := update.Message.ReplyToMessage
 	err := bot.DeleteMessage(Delete(tu.ID(re.Chat.ID), re.MessageID))
 	if err != nil {
+		let.Println(err)
 		bot.EditMessageText(&tg.EditMessageTextParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID, Text: "-"})
 	}
 }
@@ -316,6 +321,21 @@ func bhAnyCommand(bot *tg.Bot, update tg.Update) {
 				case reIP.MatchString(tm.Text):
 					bhAnyWithMatch(bot, update)
 				}
+				return
+			}
+		}
+		// For owner as first chatID in args
+		if tm.From != nil && chats[:1].allowed(tm.From.ID) {
+			p = "/restart"
+			if strings.HasPrefix(tm.Text, p) {
+				tacker.Reset(time.Millisecond * 100)
+				time.Sleep(time.Millisecond * 150)
+				tacker.Reset(time.Hour)
+				return
+			}
+			p = "/stop"
+			if strings.HasPrefix(tm.Text, p) {
+				closer.Close()
 				return
 			}
 		}

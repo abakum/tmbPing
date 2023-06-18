@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -158,16 +157,15 @@ func (s *sCustomer) count() int {
 
 type customers []customer
 
-type AAA []string
+type AAA []int64
 
 func (a AAA) allowed(ChatID int64) bool {
-	s := strconv.FormatInt(ChatID, 10)
 	for _, v := range a {
-		if v == s {
+		if v == ChatID {
 			return true
 		}
 	}
-	ltf.Println(s, "not in", a)
+	ltf.Println(ChatID, "not in", a)
 	return false
 }
 

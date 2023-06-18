@@ -77,12 +77,15 @@ func src(deep int) (s string) {
 
 // Wrap source of code and message to error
 func Errorf(format string, args ...any) error {
-	return fmt.Errorf(src(8)+" %w", fmt.Errorf(format, args...))
+	return fmt.Errorf("%s %w", src(8), fmt.Errorf(format, args...))
 }
 
 // Wrap source of code and error to error
 func srcError(err error) error {
-	return fmt.Errorf(src(8)+" %w", err)
+	if err != nil {
+		return fmt.Errorf("%s %w", src(8), err)
+	}
+	return err
 }
 
 func PrintOk(s string, err error) {

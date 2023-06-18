@@ -7,7 +7,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"golang.ngrok.com/ngrok"
 	"golang.ngrok.com/ngrok/config"
@@ -66,10 +65,6 @@ func main() {
 			// Stop reviving updates from update channel and shutdown webhook server
 			bot.StopWebhook()
 			fmt.Println("StopWebhook done")
-
-			// Unset webhook on telegram server but keep updates for next start
-			bot.DeleteWebhook(&telego.DeleteWebhookParams{DropPendingUpdates: false})
-			fmt.Println("DeleteWebhook done")
 
 			// Notify that stop is done
 			done <- struct{}{}
@@ -137,8 +132,6 @@ func main() {
 					restart = true
 					sigs <- syscall.Signal(0xa)
 					<-done
-					// To prevent "Too Many Requests"
-					time.Sleep(time.Second)
 				}
 
 				// Stop bot on command /stop
@@ -154,5 +147,10 @@ func main() {
 
 	// Wait for the stop process to be completed
 	<-done
+
+	// Unset webhook on telegram server but keep updates for next start
+	bot.DeleteWebhook(&telego.DeleteWebhookParams{DropPendingUpdates: false})
+	fmt.Println("DeleteWebhook done")
+
 	fmt.Println("Done")
 }

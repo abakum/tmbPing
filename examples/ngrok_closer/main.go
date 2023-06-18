@@ -7,7 +7,6 @@ import (
 	"path"
 	"runtime/debug"
 	"strings"
-	"time"
 
 	"golang.ngrok.com/ngrok"
 	"golang.ngrok.com/ngrok/config"
@@ -22,6 +21,7 @@ func main() {
 	var (
 		err     error
 		cleanup func()
+		bot     *telego.Bot
 	)
 	defer closer.Close()
 
@@ -34,12 +34,17 @@ func main() {
 		if cleanup != nil {
 			cleanup()
 		}
+		if bot != nil {
+			// Unset webhook on telegram server but keep updates for next start
+			bot.DeleteWebhook(&telego.DeleteWebhookParams{DropPendingUpdates: false})
+			fmt.Println("DeleteWebhook done")
+		}
 		fmt.Println("Done")
 	})
 	botToken := os.Getenv("TOKEN")
 
 	// Note: Please keep in mind that default logger may expose sensitive information, use in development only
-	bot, err := telego.NewBot(botToken, telego.WithDefaultDebugLogger())
+	bot, err = telego.NewBot(botToken, telego.WithDefaultDebugLogger())
 	if err != nil {
 		err = srcError(err)
 		return
@@ -74,10 +79,6 @@ func main() {
 			// Stop reviving updates from update channel and shutdown webhook server
 			bot.StopWebhook()
 			fmt.Println("StopWebhook done")
-
-			// Unset webhook on telegram server but keep updates for next start
-			bot.DeleteWebhook(&telego.DeleteWebhookParams{DropPendingUpdates: false})
-			fmt.Println("DeleteWebhook done")
 		}
 
 		// Set SecretToken - let there be a little more security
@@ -137,8 +138,6 @@ func main() {
 				if strings.HasPrefix(update.Message.Text, "/restart") {
 					restart = true
 					cleanup()
-					// To prevent "Too Many Requests"
-					time.Sleep(time.Second) //to prevent Too Many Requests
 				}
 
 				// Stop bot on command /stop

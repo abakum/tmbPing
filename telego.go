@@ -293,7 +293,7 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 			//use ngrok-go client
 			forwardsTo = Getenv("forwardsTo", "https://localhost")
 			for i := 0; i < 3; i++ {
-				updates, err = UpdatesWithNgrok(bot, secret, endPoint)
+				updates, err = UpdatesWithNgrok(bot, "", endPoint)
 				if err == nil {
 					break
 				}
@@ -321,7 +321,7 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 	go func() {
 		err = bot.StartWebhook(addressWebHook(forwardsTo))
 		if err != nil {
-			letf.Println("StartWebhook", err)
+			PrintOk("StartWebhook", err)
 			closer.Close()
 		}
 	}()

@@ -56,8 +56,38 @@ func ngrokWeb() (publicURL string, forwardsTo string, err error) {
 	}
 	return "", "", Errorf("not found online client")
 }
+func ngrokAPI(NGROK_API_KEY string) (publicURL string, forwardsTo string, err error) {
+	if NGROK_API_KEY == "" {
+		return "", "", Errorf("empty NGROK_API_KEY")
+	}
 
-func ngrokAPI() (publicURL string, forwardsTo string, err error) {
+	// construct the api client
+	clientConfig := ngrok.NewClientConfig(NGROK_API_KEY)
+
+	// list all online client
+	client := tunnels.NewClient(clientConfig)
+	iter := client.List(nil)
+	err = iter.Err()
+	if err != nil {
+		return "", "", srcError(err)
+	}
+
+	ctx, ca := context.WithTimeout(context.Background(), time.Second*3)
+	defer ca()
+	for iter.Next(ctx) {
+		if true { //free version allow only one tunnel
+			return iter.Item().PublicURL, iter.Item().ForwardsTo, nil
+		}
+	}
+	err = iter.Err()
+	if err != nil {
+		return "", "", srcError(err)
+	} else {
+		return "", "", Errorf("not found online client")
+	}
+}
+
+func ngrokAPI_() (publicURL string, forwardsTo string, err error) {
 	NGROK_API_KEY := os.Getenv("NGROK_API_KEY")
 	if NGROK_API_KEY == "" {
 		return "", "", Errorf("not NGROK_API_KEY in env")

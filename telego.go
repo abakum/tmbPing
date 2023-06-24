@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -287,7 +288,7 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 	if err != nil {
 		lt.Println(err)
 		//for ngrok.exe client without web interface but with NGROK_API_KEY in env
-		publicURL, forwardsTo, err = ngrokAPI()
+		publicURL, forwardsTo, err = ngrokAPI(os.Getenv("NGROK_API_KEY"))
 		if err != nil {
 			lt.Println(err)
 			//use ngrok-go client

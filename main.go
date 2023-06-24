@@ -123,7 +123,7 @@ func main() {
 	if err != nil {
 		return
 	}
-	ltf.Println(ngrokAPI())
+	ltf.Println(ngrokAPI(os.Getenv("NGROK_API_KEY")))
 	closer.Hold()
 }
 func stopH(bot *tg.Bot, bh *th.BotHandler) error {

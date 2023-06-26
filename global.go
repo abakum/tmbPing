@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"regexp"
 	"strconv"
@@ -16,17 +14,10 @@ import (
 )
 
 const (
-	numFL     = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
-	ansiReset = "\u001B[0m"
-	ansiRedBG = "\u001B[41m"
-	BUG       = ansiRedBG + "Ж" + ansiReset
+	numFL = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
 )
 
 var (
-	letf        = log.New(os.Stdout, BUG, log.Ltime|log.Lshortfile)
-	ltf         = log.New(os.Stdout, " ", log.Ltime|log.Lshortfile)
-	let         = log.New(os.Stdout, BUG, log.Ltime)
-	lt          = log.New(os.Stdout, " ", log.Ltime)
 	chats       = NewAAA()
 	done        = make(chan bool, 10)
 	ips         = sCustomer{mcCustomer: mcCustomer{}}
@@ -220,25 +211,4 @@ func (m mss) add(key string, vals ...string) (val string) {
 		val = a0
 	}
 	return
-}
-
-type Logger struct{}
-
-func woToken(format string, args ...any) (s string) {
-	s = src(10) + " " + fmt.Sprintf(format, args...)
-	btStart := strings.Index(s, "/bot") + 4
-	if btStart > 4-1 {
-		btLen := strings.Index(s[btStart:], "/")
-		if btLen > 0 {
-			s = s[:btStart] + s[btStart+btLen:]
-		}
-	}
-	return
-}
-func (Logger) Debugf(format string, args ...any) {
-	lt.Print(woToken(format, args...))
-}
-
-func (Logger) Errorf(format string, args ...any) {
-	let.Print(woToken(format, args...))
 }

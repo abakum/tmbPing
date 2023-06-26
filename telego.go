@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"net"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -328,6 +330,56 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 	}()
 
 	return updates, nil
+}
+
+func manInTheMiddle(bot *tg.Bot) bool {
+	// Receive information about webhook
+	info, err := bot.GetWebhookInfo()
+	if err != nil {
+		return false
+	}
+	// stdo.Printf("Webhook Info: %+v\n", info)
+	if info.IPAddress == "" || info.URL == "" {
+		return false
+	}
+
+	//test ip of webhook
+	u, err := url.Parse(info.URL)
+	if err != nil {
+		return false
+	}
+	ips, err := net.LookupIP(u.Hostname())
+	if err != nil {
+		return false
+	}
+	for _, ip := range ips {
+		if ip.String() == info.IPAddress {
+			return false
+		}
+	}
+	letf.Printf("manInTheMiddle GetWebhookInfo.IPAddress: %v but GetWebhookInfo.URL ip:%v\n", info.IPAddress, ips)
+	return true
+}
+
+type Logger struct{}
+
+func woToken(format string, args ...any) (s string) {
+	s = src(10) + " " + fmt.Sprintf(format, args...)
+	btStart := strings.Index(s, "/bot") + 4
+	if btStart > 4-1 {
+		btLen := strings.Index(s[btStart:], "/")
+		if btLen > 0 {
+			s = s[:btStart] + s[btStart+btLen:]
+		}
+	}
+	return
+}
+func (Logger) Debugf(format string, args ...any) {
+	lt.Print(woToken(format, args...))
+}
+
+func (Logger) Errorf(format string, args ...any) {
+	let.Print(woToken(format, args...))
 }
 
 // // UpdatesWithSecret set secretToken to FastHTTPWebhookServer and SetWebhookParams

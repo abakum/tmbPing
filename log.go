@@ -73,11 +73,3 @@ func pressEnter() {
 	fmt.Print("Press Enter>")
 	fmt.Scanln()
 }
-
-func Getenv(key, val string) string {
-	s := os.Getenv(key)
-	if s == "" {
-		return val
-	}
-	return s
-}

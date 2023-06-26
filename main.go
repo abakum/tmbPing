@@ -37,6 +37,7 @@ func main() {
 		ltf.Println("closer ips.close")
 		ips.close()
 		wg.Wait()
+		pressEnter()
 	})
 	ul, err = jibber_jabber.DetectLanguage()
 	if err != nil {
@@ -49,7 +50,7 @@ func main() {
 		), os.Args[0])
 		return
 	} else {
-		ltf.Println(dic.add(ul,
+		li.Println(dic.add(ul,
 			"en:Allowed ChatID:",
 			"ru:Разрешённые ChatID:",
 		), chats)
@@ -58,7 +59,7 @@ func main() {
 	if err == nil {
 		tmbPingJson = filepath.Join(ex, tmbPingJson)
 	}
-	ltf.Println(filepath.FromSlash(tmbPingJson))
+	li.Println(filepath.FromSlash(tmbPingJson))
 
 	bot, err = tg.NewBot(os.Getenv("TOKEN"), tg.WithLogger(tg.Logger(Logger{}))) // tg.WithDefaultDebugLogger()
 	// bot, err = tg.NewBot(os.Getenv("TOKEN"))
@@ -123,7 +124,7 @@ func main() {
 	if err != nil {
 		return
 	}
-	ltf.Println(ngrokAPI(os.Getenv("NGROK_API_KEY")))
+	li.Println(ngrokAPI(os.Getenv("NGROK_API_KEY")))
 	closer.Hold()
 }
 func stopH(bot *tg.Bot, bh *th.BotHandler) error {

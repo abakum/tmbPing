@@ -5,16 +5,21 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"time"
 
-	"github.com/mymmrac/telego"
 	"github.com/ngrok/ngrok-api-go/v5"
 	"github.com/ngrok/ngrok-api-go/v5/tunnels"
 )
+
+func Getenv(key, val string) string {
+	s := os.Getenv(key)
+	if s == "" {
+		return val
+	}
+	return s
+}
 
 func ngrokWeb() (publicURL string, forwardsTo string, err error) {
 	web_addr := Getenv("web_addr", "localhost:4040")
@@ -56,7 +61,8 @@ func ngrokWeb() (publicURL string, forwardsTo string, err error) {
 	}
 	return "", "", Errorf("not found online client")
 }
-func ngrokAPI(NGROK_API_KEY string) (publicURL string, forwardsTo string, err error) {
+
+func ngrokAPI(NGROK_API_KEY string) (string, string, error) {
 	if NGROK_API_KEY == "" {
 		return "", "", Errorf("empty NGROK_API_KEY")
 	}
@@ -67,17 +73,16 @@ func ngrokAPI(NGROK_API_KEY string) (publicURL string, forwardsTo string, err er
 	// list all online client
 	client := tunnels.NewClient(clientConfig)
 	iter := client.List(nil)
-	err = iter.Err()
+	err := iter.Err()
 	if err != nil {
 		return "", "", srcError(err)
 	}
 
 	ctx, ca := context.WithTimeout(context.Background(), time.Second*3)
 	defer ca()
-	for iter.Next(ctx) {
-		if true { //free version allow only one tunnel
-			return iter.Item().PublicURL, iter.Item().ForwardsTo, nil
-		}
+	//free version allow only one tunnel
+	if iter.Next(ctx) {
+		return iter.Item().PublicURL, iter.Item().ForwardsTo, nil
 	}
 	err = iter.Err()
 	if err != nil {
@@ -85,64 +90,4 @@ func ngrokAPI(NGROK_API_KEY string) (publicURL string, forwardsTo string, err er
 	} else {
 		return "", "", Errorf("not found online client")
 	}
-}
-
-func ngrokAPI_() (publicURL string, forwardsTo string, err error) {
-	NGROK_API_KEY := os.Getenv("NGROK_API_KEY")
-	if NGROK_API_KEY == "" {
-		return "", "", Errorf("not NGROK_API_KEY in env")
-	}
-
-	// construct the api client
-	clientConfig := ngrok.NewClientConfig(NGROK_API_KEY)
-
-	// list all online client
-	client := tunnels.NewClient(clientConfig)
-	iter := client.List(nil)
-	err = iter.Err()
-	if err != nil {
-		return "", "", srcError(err)
-	}
-
-	ctx, ca := context.WithTimeout(context.Background(), time.Second*3)
-	defer ca()
-	for iter.Next(ctx) {
-		err = iter.Err()
-		if err != nil {
-			return "", "", srcError(err)
-		}
-		if true { //free version allow only one tunnel
-			return iter.Item().PublicURL, iter.Item().ForwardsTo, nil
-		}
-	}
-	return "", "", Errorf("not found online client")
-}
-
-func manInTheMiddle(bot *telego.Bot) bool {
-	// Receive information about webhook
-	info, err := bot.GetWebhookInfo()
-	if err != nil {
-		return false
-	}
-	// stdo.Printf("Webhook Info: %+v\n", info)
-	if info.IPAddress == "" || info.URL == "" {
-		return false
-	}
-
-	//test ip of webhook
-	u, err := url.Parse(info.URL)
-	if err != nil {
-		return false
-	}
-	ips, err := net.LookupIP(u.Hostname())
-	if err != nil {
-		return false
-	}
-	for _, ip := range ips {
-		if ip.String() == info.IPAddress {
-			return false
-		}
-	}
-	letf.Printf("manInTheMiddle GetWebhookInfo.IPAddress: %v but GetWebhookInfo.URL ip:%v\n", info.IPAddress, ips)
-	return true
 }

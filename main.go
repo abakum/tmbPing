@@ -97,7 +97,7 @@ func main() {
 		defer wg.Done()
 		ticker = time.NewTicker(dd)
 		defer ticker.Stop()
-		tacker = time.NewTicker(time.Hour)
+		tacker = time.NewTicker(dd)
 		defer tacker.Stop()
 		for {
 			select {

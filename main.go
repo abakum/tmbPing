@@ -24,6 +24,12 @@ func main() {
 	closer.Bind(func() {
 		if err != nil {
 			let.Println(err)
+			if bot != nil && len(chats) > 0 {
+				bot.SendMessage(tu.MessageWithEntities(tu.ID(chats[0]),
+					tu.Entity("💥"),
+					tu.Entity(err.Error()).Code(),
+				))
+			}
 			defer os.Exit(1)
 		}
 		PrintOk("stopH", stopH(bot, bh))
@@ -97,7 +103,7 @@ func main() {
 		defer wg.Done()
 		ticker = time.NewTicker(dd)
 		defer ticker.Stop()
-		tacker = time.NewTicker(dd)
+		tacker = time.NewTicker(time.Hour)
 		defer tacker.Stop()
 		for {
 			select {

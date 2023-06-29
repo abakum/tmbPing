@@ -34,7 +34,7 @@ func main() {
 		ltf.Println("closer ips.close")
 		ips.close()
 		wg.Wait()
-		pressEnter()
+		// pressEnter()
 	})
 	ul, err = jibber_jabber.DetectLanguage()
 	if err != nil {
@@ -158,6 +158,8 @@ func DeleteWebhook(bot *tg.Bot) {
 func startH(bot *tg.Bot) (*th.BotHandler, error) {
 	updates, err := ngrokWebHook(bot)
 	if err != nil {
+		PrintOk("ngrokWebHook", err)
+		SendError(bot, Errorf("ngrokWebHook %w", err))
 		tt = Reset(tacker, tt, refresh)
 		DeleteWebhook(bot)
 		ltf.Println("UpdatesViaLongPolling")

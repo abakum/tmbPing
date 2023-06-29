@@ -320,6 +320,7 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 			closer.Close()
 		}
 	}()
+	SendError(bot, Errorf("UpdatesWithNgrok"))
 
 	return updates, nil
 }

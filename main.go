@@ -24,20 +24,11 @@ func main() {
 	closer.Bind(func() {
 		if err != nil {
 			let.Println(err)
-			if bot != nil && len(chats) > 0 {
-				bot.SendMessage(tu.MessageWithEntities(tu.ID(chats[0]),
-					tu.Entity("💥"),
-					tu.Entity(err.Error()).Code(),
-				))
-			}
+			SendError(bot, err)
 			defer os.Exit(1)
 		}
 		PrintOk("stopH", stopH(bot, bh))
-		if bot != nil {
-			PrintOk("DeleteWebhook", bot.DeleteWebhook(&tg.DeleteWebhookParams{
-				DropPendingUpdates: false,
-			}))
-		}
+		DeleteWebhook(bot)
 		ltf.Println("closer done <- true")
 		done <- true
 		ltf.Println("closer ips.close")
@@ -88,6 +79,8 @@ func main() {
 	}
 
 	// bot.DeleteMyCommands(nil)
+	tacker = time.NewTicker(tt)
+	defer tacker.Stop()
 	bh, err := startH(bot)
 	if err != nil {
 		return
@@ -103,7 +96,7 @@ func main() {
 		defer wg.Done()
 		ticker = time.NewTicker(dd)
 		defer ticker.Stop()
-		tacker = time.NewTicker(time.Hour)
+		// tacker = time.NewTicker(tt)
 		defer tacker.Stop()
 		for {
 			select {
@@ -142,14 +135,37 @@ func stopH(bot *tg.Bot, bh *th.BotHandler) error {
 		if bot.IsRunningWebhook() {
 			return srcError(bot.StopWebhook())
 		}
+		if bot.IsRunningLongPolling() {
+			ltf.Println("StopLongPolling")
+			bot.StopLongPolling()
+			getUpdates = time.NewTimer(time.Second * 8)
+			<-getUpdates.C
+			getUpdates.Stop()
+			getUpdates = nil
+		}
 	}
 	return nil
+}
+
+func DeleteWebhook(bot *tg.Bot) {
+	if bot != nil {
+		PrintOk("DeleteWebhook", bot.DeleteWebhook(&tg.DeleteWebhookParams{
+			DropPendingUpdates: false,
+		}))
+	}
 }
 
 func startH(bot *tg.Bot) (*th.BotHandler, error) {
 	updates, err := ngrokWebHook(bot)
 	if err != nil {
-		return nil, err
+		tt = Reset(tacker, tt, refresh)
+		DeleteWebhook(bot)
+		ltf.Println("UpdatesViaLongPolling")
+		updates, err = bot.UpdatesViaLongPolling(nil)
+		if err != nil {
+			return nil, err
+		}
+		SendError(bot, Errorf("UpdatesViaLongPolling"))
 	}
 
 	bh, err := th.NewBotHandler(bot, updates)
@@ -302,6 +318,21 @@ func bhReplyMessageIsMinus(bot *tg.Bot, update tg.Update) {
 	}
 }
 
+// if old != new then t.Reset
+// if old == 0 then send t.C after time.Millisecond * 100
+func Reset(t *time.Ticker, old, new time.Duration) time.Duration {
+	if t != nil {
+		if old == 0 {
+			t.Reset(time.Millisecond * 100)
+			time.Sleep(time.Millisecond * 150)
+		}
+		if old != new {
+			t.Reset(new)
+		}
+	}
+	return new
+}
+
 func bhAnyCommand(bot *tg.Bot, update tg.Update) {
 	tm := update.Message
 	if tm == nil {
@@ -327,11 +358,7 @@ func bhAnyCommand(bot *tg.Bot, update tg.Update) {
 		if tm.From != nil && chats[:1].allowed(tm.From.ID) {
 			p = "/restart"
 			if strings.HasPrefix(tm.Text, p) {
-				if tacker != nil {
-					tacker.Reset(time.Millisecond * 100)
-					time.Sleep(time.Millisecond * 150)
-					tacker.Reset(time.Hour)
-				}
+				tt = Reset(tacker, 0, tt)
 				return
 			}
 			p = "/stop"

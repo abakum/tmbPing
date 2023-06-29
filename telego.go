@@ -15,6 +15,7 @@ import (
 	"github.com/fasthttp/router"
 	tg "github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
+	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/valyala/fasthttp"
 	"github.com/xlab/closer"
 	"golang.ngrok.com/ngrok"
@@ -295,18 +296,9 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 			lt.Println(err)
 			//use ngrok-go client
 			forwardsTo = Getenv("forwardsTo", "https://localhost")
-			for i := 0; i < 3; i++ {
-				updates, err = UpdatesWithNgrok(bot, "", endPoint)
-				if err == nil {
-					break
-				}
-				letf.Printf("try %d: not ngrok tunnel %v", i, err)
-				time.Sleep(time.Second * 3)
-			}
-			if err != nil {
-				err = Errorf("not ngrok tunnel %w", err)
-			} else {
-				forwardsTo = ""
+			updates, err = UpdatesWithNgrok(bot, "", endPoint)
+			if err == nil {
+				tt = Reset(tacker, tt, time.Hour)
 				ltf.Println("UpdatesWithNgrok")
 			}
 		} else {
@@ -375,11 +367,23 @@ func woToken(format string, args ...any) (s string) {
 	return
 }
 func (Logger) Debugf(format string, args ...any) {
+	if getUpdates != nil && format == "API response %s: %s" && args[0] == "getUpdates" {
+		getUpdates.Reset(time.Millisecond)
+	}
 	lt.Print(woToken(format, args...))
 }
 
 func (Logger) Errorf(format string, args ...any) {
 	let.Print(woToken(format, args...))
+}
+
+func SendError(bot *tg.Bot, err error) {
+	if bot != nil && len(chats) > 0 && err != nil {
+		bot.SendMessage(tu.MessageWithEntities(tu.ID(chats[0]),
+			tu.Entity("💥"),
+			tu.Entity(err.Error()).Code(),
+		))
+	}
 }
 
 // // UpdatesWithSecret set secretToken to FastHTTPWebhookServer and SetWebhookParams

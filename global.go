@@ -24,6 +24,7 @@ var (
 	bot         *tg.Bot
 	refresh     = time.Second * 60
 	dd          = time.Hour * 8
+	tt          = time.Hour
 	save        = make(cCustomer, 1)
 	saveDone    = make(chan bool, 1)
 	tmbPingJson = "tmbPing.json"
@@ -45,9 +46,10 @@ var (
 		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
 		tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
 	}
-	ikbsf int
-	wg    sync.WaitGroup
-	bh    *th.BotHandler
+	ikbsf      int
+	wg         sync.WaitGroup
+	bh         *th.BotHandler
+	getUpdates *time.Timer
 )
 
 type customer struct {

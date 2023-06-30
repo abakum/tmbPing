@@ -14,7 +14,11 @@ import (
 )
 
 const (
-	numFL = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
+	numFL   = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
+	ttm     = time.Minute * 10
+	tth     = time.Hour * 2
+	refresh = time.Second * 60
+	dd      = time.Hour * 8
 )
 
 var (
@@ -22,9 +26,7 @@ var (
 	done        = make(chan bool, 10)
 	ips         = sCustomer{mcCustomer: mcCustomer{}}
 	bot         *tg.Bot
-	refresh     = time.Second * 60
-	dd          = time.Hour * 8
-	tt          = time.Hour
+	tt          = tth
 	save        = make(cCustomer, 1)
 	saveDone    = make(chan bool, 1)
 	tmbPingJson = "tmbPing.json"

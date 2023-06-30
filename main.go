@@ -159,15 +159,17 @@ func startH(bot *tg.Bot) (*th.BotHandler, error) {
 	updates, err := ngrokWebHook(bot)
 	if err != nil {
 		PrintOk("ngrokWebHook", err)
-		SendError(bot, Errorf("ngrokWebHook %w", err))
-		tt = Reset(tacker, tt, refresh)
-		DeleteWebhook(bot)
-		ltf.Println("UpdatesViaLongPolling")
+		if tt != ttm {
+			tt = ttm
+			tacker.Reset(ttm) // next try after ttm
+			SendError(bot, err)
+			DeleteWebhook(bot)
+		}
 		updates, err = bot.UpdatesViaLongPolling(nil)
 		if err != nil {
 			return nil, err
 		}
-		SendError(bot, Errorf("UpdatesViaLongPolling"))
+		letf.Println("UpdatesViaLongPolling")
 	}
 
 	bh, err := th.NewBotHandler(bot, updates)
@@ -320,19 +322,12 @@ func bhReplyMessageIsMinus(bot *tg.Bot, update tg.Update) {
 	}
 }
 
-// if old != new then t.Reset
-// if old == 0 then send t.C after time.Millisecond * 100
-func Reset(t *time.Ticker, old, new time.Duration) time.Duration {
+func restart(t *time.Ticker, d time.Duration) {
 	if t != nil {
-		if old == 0 {
-			t.Reset(time.Millisecond * 100)
-			time.Sleep(time.Millisecond * 150)
-		}
-		if old != new {
-			t.Reset(new)
-		}
+		t.Reset(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 150)
+		t.Reset(d)
 	}
-	return new
 }
 
 func bhAnyCommand(bot *tg.Bot, update tg.Update) {
@@ -360,7 +355,7 @@ func bhAnyCommand(bot *tg.Bot, update tg.Update) {
 		if tm.From != nil && chats[:1].allowed(tm.From.ID) {
 			p = "/restart"
 			if strings.HasPrefix(tm.Text, p) {
-				tt = Reset(tacker, 0, tt)
+				restart(tacker, tt)
 				return
 			}
 			p = "/stop"

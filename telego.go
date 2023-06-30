@@ -298,8 +298,12 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 			forwardsTo = Getenv("forwardsTo", "https://localhost")
 			updates, err = UpdatesWithNgrok(bot, "", endPoint)
 			if err == nil {
-				tt = Reset(tacker, tt, time.Hour)
 				ltf.Println("UpdatesWithNgrok")
+				if tt != tth {
+					tt = ttm
+					tacker.Reset(tth) // next reconnect after tth
+					SendError(bot, Errorf("UpdatesWithNgrok"))
+				}
 			}
 		} else {
 			ltf.Println("ngrokAPI", publicURL, forwardsTo)
@@ -320,7 +324,6 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 			closer.Close()
 		}
 	}()
-	SendError(bot, Errorf("UpdatesWithNgrok"))
 
 	return updates, nil
 }

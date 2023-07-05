@@ -128,6 +128,14 @@ func main() {
 	closer.Hold()
 }
 
+// drain buffered chan c
+func drain(c chan bool) {
+	for len(c) > 0 {
+		<-c
+	}
+	ltf.Println("drain chan done")
+}
+
 // stop handler, webhook, polling
 func stopH(bot *tg.Bot, bh *th.BotHandler) error {
 	if bh != nil {
@@ -141,10 +149,12 @@ func stopH(bot *tg.Bot, bh *th.BotHandler) error {
 		if bot.IsRunningLongPolling() {
 			ltf.Println("StopLongPolling")
 			bot.StopLongPolling()
-			getUpdates = time.NewTimer(time.Second * 8)
-			<-getUpdates.C
-			getUpdates.Stop()
-			getUpdates = nil
+			drain(getUpdates)
+			go func() {
+				time.Sleep(time.Second * 8)
+				getUpdates <- false
+			}()
+			ltf.Println("getUpdates", <-getUpdates)
 		}
 	}
 	return nil

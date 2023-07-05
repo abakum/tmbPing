@@ -389,8 +389,8 @@ func woToken(format string, args ...any) (s string) {
 
 // bot debug message
 func (Logger) Debugf(format string, args ...any) {
-	if getUpdates != nil && format == "API response %s: %s" && args[0] == "getUpdates" {
-		getUpdates.Reset(time.Millisecond)
+	if format == "API response %s: %s" && args[0] == "getUpdates" && len(getUpdates) == 0 {
+		getUpdates <- true
 	}
 	lt.Print(woToken(format, args...))
 }

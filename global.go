@@ -51,9 +51,10 @@ var (
 	ikbsf      int
 	wg         sync.WaitGroup
 	bh         *th.BotHandler
-	getUpdates *time.Timer
+	getUpdates = make(chan bool, 2)
 )
 
+// ping customer
 type customer struct {
 	Tm    *tg.Message `json:"tm,omitempty"`    //task
 	Cmd   string      `json:"cmd,omitempty"`   //command
@@ -77,6 +78,7 @@ func (s *sCustomer) close() {
 	}
 }
 
+// remove ip from ping list
 func (s *sCustomer) del(ip string, closed bool) {
 	ltf.Println("sCustomer.del ", ip)
 	s.Lock()
@@ -98,6 +100,8 @@ func (s *sCustomer) del(ip string, closed bool) {
 		}
 	}
 }
+
+// add ip to ping list
 func (s *sCustomer) add(ip string) (ch cCustomer) {
 	ltf.Println("sCustomer.add ", ip)
 	ch = make(cCustomer, 10)
@@ -113,6 +117,7 @@ func (s *sCustomer) add(ip string) (ch cCustomer) {
 	return
 }
 
+// add ip to ping list
 func (s *sCustomer) write(ip string, c customer) {
 	ltf.Println("sCustomer.write ", ip, c)
 	defer func() {
@@ -132,6 +137,7 @@ func (s *sCustomer) write(ip string, c customer) {
 		s.add(ip) <- c
 	}
 }
+
 func (s *sCustomer) read(ip string) (ok bool) {
 	ltf.Println("sCustomer.read ", ip)
 	s.RLock()

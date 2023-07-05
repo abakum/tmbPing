@@ -24,7 +24,7 @@ var (
 	li   = log.New(os.Stdout, "\t", 0)
 )
 
-// Get source of code
+// get source of code
 func src(deep int) (s string) {
 	s = string(debug.Stack())
 	str := strings.Split(s, "\n")
@@ -41,12 +41,12 @@ func src(deep int) (s string) {
 	return
 }
 
-// Wrap source of code and message to error
+// wrap source of code and message to error
 func Errorf(format string, args ...any) error {
 	return fmt.Errorf(src(8)+" %w", fmt.Errorf(format, args...))
 }
 
-// Wrap source of code and error to error
+// wrap source of code and error to error
 func srcError(err error) error {
 	if err == nil {
 		return nil
@@ -54,6 +54,7 @@ func srcError(err error) error {
 	return fmt.Errorf(src(8)+" %w", err)
 }
 
+// print error or ok
 func PrintOk(s string, err error) {
 	if err != nil {
 		let.Println(src(8), s, err)
@@ -62,12 +63,14 @@ func PrintOk(s string, err error) {
 	}
 }
 
+// disable log
 func logOff() {
 	for _, l := range []*log.Logger{letf, ltf, let, lt, li} {
 		l.SetOutput(io.Discard)
 	}
 }
 
+// wait pressing enter
 func pressEnter() {
 	logOff()
 	fmt.Print("Press Enter>")

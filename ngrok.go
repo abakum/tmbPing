@@ -13,6 +13,7 @@ import (
 	"github.com/ngrok/ngrok-api-go/v5/tunnels"
 )
 
+// getenv with default as val
 func Getenv(key, val string) string {
 	s := os.Getenv(key)
 	if s == "" {
@@ -21,6 +22,7 @@ func Getenv(key, val string) string {
 	return s
 }
 
+// detect ngrok.exe client with web interface with web_addr in env for debug
 func ngrokWeb() (publicURL string, forwardsTo string, err error) {
 	web_addr := Getenv("web_addr", "localhost:4040")
 	var client struct {
@@ -62,6 +64,7 @@ func ngrokWeb() (publicURL string, forwardsTo string, err error) {
 	return "", "", Errorf("not found online client")
 }
 
+// detect ngrok.exe client without web interface but with NGROK_API_KEY in env
 func ngrokAPI(NGROK_API_KEY string) (string, string, error) {
 	if NGROK_API_KEY == "" {
 		return "", "", Errorf("empty NGROK_API_KEY")

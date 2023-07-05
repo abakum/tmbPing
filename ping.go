@@ -7,6 +7,7 @@ import (
 	probing "github.com/prometheus-community/pro-bing"
 )
 
+// ping ip
 func ping(ip string) (status string, err error) {
 	pinger, err := probing.NewPinger(ip)
 	if err != nil {

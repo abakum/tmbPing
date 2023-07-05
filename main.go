@@ -92,6 +92,7 @@ func main() {
 	go saver()
 
 	wg.Add(1)
+	// main loop
 	go func() {
 		defer wg.Done()
 		ticker = time.NewTicker(dd)
@@ -126,6 +127,8 @@ func main() {
 	li.Println(ngrokAPI(os.Getenv("NGROK_API_KEY")))
 	closer.Hold()
 }
+
+// stop handler, webhook, polling
 func stopH(bot *tg.Bot, bh *th.BotHandler) error {
 	if bh != nil {
 		ltf.Println("bh.Stop")
@@ -155,6 +158,7 @@ func DeleteWebhook(bot *tg.Bot) {
 	}
 }
 
+// start handler and webhook or polling
 func startH(bot *tg.Bot) (*th.BotHandler, error) {
 	updates, err := ngrokWebHook(bot)
 	if err != nil {
@@ -197,6 +201,7 @@ func startH(bot *tg.Bot) (*th.BotHandler, error) {
 	return bh, nil
 }
 
+// handler IP
 func bhAnyWithMatch(bot *tg.Bot, update tg.Update) {
 	tc, ctm := tmtc(update)
 	if ctm == nil {
@@ -229,6 +234,7 @@ func bhAnyWithMatch(bot *tg.Bot, update tg.Update) {
 	}
 }
 
+// handler EasterEgg
 func bhEasterEgg(bot *tg.Bot, update tg.Update) {
 	tc, ctm := tmtc(update)
 	if ctm == nil {
@@ -265,6 +271,7 @@ func bhEasterEgg(bot *tg.Bot, update tg.Update) {
 	}
 }
 
+// handler Callback
 func bhAnyCallbackQueryWithMessage(bot *tg.Bot, update tg.Update) {
 	uc := update.CallbackQuery
 	if uc == nil {
@@ -290,7 +297,7 @@ func bhAnyCallbackQueryWithMessage(bot *tg.Bot, update tg.Update) {
 	}
 	if Data == "❎" {
 		// bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(tm.Chat.ID), MessageID: tm.MessageID})
-		bot.DeleteMessage(Delete(tu.ID(tm.Chat.ID), tm.MessageID))
+		bot.DeleteMessage(tu.Delete(tu.ID(tm.Chat.ID), tm.MessageID))
 		return
 	}
 	if Data == "…" { //chats.allowed(uc.From.ID) &&
@@ -313,15 +320,18 @@ func bhAnyCallbackQueryWithMessage(bot *tg.Bot, update tg.Update) {
 		ips.write(ip, customer{Cmd: Data})
 	}
 }
+
+// handler DeleteMessage
 func bhReplyMessageIsMinus(bot *tg.Bot, update tg.Update) {
 	re := update.Message.ReplyToMessage
-	err := bot.DeleteMessage(Delete(tu.ID(re.Chat.ID), re.MessageID))
+	err := bot.DeleteMessage(tu.Delete(tu.ID(re.Chat.ID), re.MessageID))
 	if err != nil {
 		let.Println(err)
 		bot.EditMessageText(&tg.EditMessageTextParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID, Text: "-"})
 	}
 }
 
+// send t.C then reset t
 func restart(t *time.Ticker, d time.Duration) {
 	if t != nil {
 		t.Reset(time.Millisecond * 100)
@@ -330,6 +340,7 @@ func restart(t *time.Ticker, d time.Duration) {
 	}
 }
 
+// handler Command
 func bhAnyCommand(bot *tg.Bot, update tg.Update) {
 	tm := update.Message
 	if tm == nil {
@@ -386,6 +397,8 @@ func bhAnyCommand(bot *tg.Bot, update tg.Update) {
 		mecs[mecsf:]...,
 	).WithReplyToMessageID(tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
 }
+
+// handler LeftChat
 func bhLeftChat(bot *tg.Bot, update tg.Update) {
 	tm := update.Message
 	bot.SendMessage(tu.MessageWithEntities(tu.ID(tm.Chat.ID),
@@ -403,6 +416,8 @@ func bhLeftChat(bot *tg.Bot, update tg.Update) {
 	).WithReplyToMessageID(tm.MessageID))
 
 }
+
+// handler NewMember
 func bhNewMember(bot *tg.Bot, update tg.Update) {
 	tm := update.Message
 	if !chats.allowed(tm.Chat.ID) {
@@ -426,6 +441,8 @@ func bhNewMember(bot *tg.Bot, update tg.Update) {
 		break
 	}
 }
+
+// is key in args
 func allowed(key string, ChatIDs ...int64) (ok bool, s string) {
 	s = "\n🏓"
 	for _, v := range ChatIDs {
@@ -438,6 +455,7 @@ func allowed(key string, ChatIDs ...int64) (ok bool, s string) {
 	return
 }
 
+// message for ChatID
 func notAllowed(ok bool, ChatID int64, key string) (s string) {
 	s = "\n🏓"
 	if ok {
@@ -454,6 +472,7 @@ func notAllowed(ok bool, ChatID int64, key string) (s string) {
 	return
 }
 
+// tm info
 func fcRfRc(tm *tg.Message) (s string) {
 	s = ""
 	if tm == nil {
@@ -466,6 +485,8 @@ func fcRfRc(tm *tg.Message) (s string) {
 	s = fmt.Sprintf(" Reply From:@%s #%d Reply Chat:@%s #%d", tm.ReplyToMessage.From.Username, tm.ReplyToMessage.From.ID, tm.ReplyToMessage.Chat.Title, tm.ReplyToMessage.Chat.ID)
 	return
 }
+
+// encode for /start
 func start(me *tg.User, s string) string {
 	return fmt.Sprintf("t.me/%s?start=%s", me.Username, base64.StdEncoding.EncodeToString([]byte(s)))
 }

@@ -8,6 +8,7 @@ import (
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
+// send ip to ch for add it to ping list
 func worker(ip string, ch cCustomer) {
 	// var buttons *telego.InlineKeyboardMarkup
 	var (
@@ -67,7 +68,7 @@ func worker(ip string, ch cCustomer) {
 								re := cu.Reply
 								if re != nil {
 									// bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID})
-									bot.DeleteMessage(Delete(tu.ID(re.Chat.ID), re.MessageID))
+									bot.DeleteMessage(tu.Delete(tu.ID(re.Chat.ID), re.MessageID))
 								}
 							}
 							return
@@ -103,7 +104,7 @@ func worker(ip string, ch cCustomer) {
 				if re == nil || status != statusOld {
 					if re != nil {
 						// bot.DeleteMessage(&tg.DeleteMessageParams{ChatID: tu.ID(re.Chat.ID), MessageID: re.MessageID})
-						bot.DeleteMessage(Delete(tu.ID(re.Chat.ID), re.MessageID))
+						bot.DeleteMessage(tu.Delete(tu.ID(re.Chat.ID), re.MessageID))
 					}
 					ikbsf = 0
 					if !chats.allowed(tf(cu.Tm.Chat.Type == "private", cu.Tm.From.ID, cu.Tm.Chat.ID)) {

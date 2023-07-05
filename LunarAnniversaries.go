@@ -9,6 +9,7 @@ import (
 	"github.com/abakum/gozodiac"
 )
 
+// list anniversaries
 func la(t time.Time) (years []string) {
 	const space = "\u2003\u2006" ////"\u2003\u2004"
 	w0, wh := wdLocale(t, ul)
@@ -74,6 +75,7 @@ func la(t time.Time) (years []string) {
 	return
 }
 
+// weekday
 func wdLocale(t time.Time, iso639_1 string) (icon string, s string) {
 	type ss []string
 	type ii struct {
@@ -106,6 +108,8 @@ func wdLocale(t time.Time, iso639_1 string) (icon string, s string) {
 	icon = string([]rune{rune(int('0') + isoWeekday), '\uFE0F', '\u20E3'})
 	return
 }
+
+// year
 func yearLocale(iso639_1 string) (s string) {
 	msS := map[string]string{
 		"ru": "г",
@@ -116,6 +120,8 @@ func yearLocale(iso639_1 string) (s string) {
 	}
 	return
 }
+
+// hash tag
 func hashTag(s string) string {
 	return "#" + strings.Replace(strings.ToLower(s), " ", "_", -1)
 }

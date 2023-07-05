@@ -22,6 +22,7 @@ import (
 	nc "golang.ngrok.com/ngrok/config"
 )
 
+// concat tc from text and caption of message or post
 func tmtc(update tg.Update) (tc string, m *tg.Message) {
 	if update.Message == nil {
 		return "", nil
@@ -46,12 +47,16 @@ func tmtc(update tg.Update) (tc string, m *tg.Message) {
 	}
 	return
 }
+
+// match pattern in text and caption of message or post
 func anyWithMatch(pattern *regexp.Regexp) th.Predicate {
 	return func(update tg.Update) bool {
 		tc, _ := tmtc(update)
 		return pattern.MatchString(tc)
 	}
 }
+
+// is command in text and caption of update
 func AnyCommand() th.Predicate {
 	return func(update tg.Update) bool {
 		_, ctm := tmtc(update)
@@ -61,12 +66,16 @@ func AnyCommand() th.Predicate {
 		return strings.HasPrefix(ctm.Text, "/") || strings.HasPrefix(ctm.Caption, "/")
 	}
 }
+
+// is command in text and caption of update
 func leftChat() th.Predicate {
 	return func(update tg.Update) bool {
 		return update.Message != nil &&
 			update.Message.LeftChatMember != nil
 	}
 }
+
+// is message about new member
 func newMember() th.Predicate {
 	return func(update tg.Update) bool {
 		return update.Message != nil &&
@@ -74,6 +83,7 @@ func newMember() th.Predicate {
 	}
 }
 
+// is reply to bot message as delete command
 func ReplyMessageIsMinus() th.Predicate {
 	return func(update tg.Update) bool {
 		return update.Message != nil &&
@@ -82,14 +92,14 @@ func ReplyMessageIsMinus() th.Predicate {
 	}
 }
 
-func Delete(ChatID tg.ChatID, MessageID int) *tg.DeleteMessageParams {
-	return &tg.DeleteMessageParams{
-		ChatID:    ChatID,
-		MessageID: MessageID,
-	}
-}
+// func Delete(ChatID tg.ChatID, MessageID int) *tg.DeleteMessageParams {
+// 	return &tg.DeleteMessageParams{
+// 		ChatID:    ChatID,
+// 		MessageID: MessageID,
+// 	}
+// }
 
-// UpdatesWithSecret set secretToken to FastHTTPWebhookServer and SetWebhookParams
+// set secretToken to FastHTTPWebhookServer and SetWebhookParams
 func UpdatesWithSecret(b *tg.Bot, secretToken, publicURL, endPoint string) (<-chan tg.Update, error) {
 	whs := tg.FastHTTPWebhookServer{
 		Logger:      b.Logger(),
@@ -106,7 +116,7 @@ func UpdatesWithSecret(b *tg.Bot, secretToken, publicURL, endPoint string) (<-ch
 		tg.WithWebhookSet(whp))
 }
 
-// UpdatesWithNgrok start ngrok.Tunnel with NGROK_AUTHTOKEN in env (optional) and SecretToken
+// start ngrok.Tunnel with NGROK_AUTHTOKEN in env (optional) and SecretToken
 func UpdatesWithNgrok(b *tg.Bot, secretToken, endPoint string) (<-chan tg.Update, error) {
 	var (
 		err error
@@ -179,6 +189,7 @@ func UpdatesWithNgrok(b *tg.Bot, secretToken, endPoint string) (<-chan tg.Update
 		tg.WithWebhookSet(whp))
 }
 
+// start ngrok.Tunnel with NGROK_AUTHTOKEN in env (optional) and SecretToken not used serve but loop of accept
 func UpdatesWithNgrokAccept(b *tg.Bot, secretToken, endPoint string) (<-chan tg.Update, error) {
 	var (
 		err error
@@ -260,6 +271,7 @@ func UpdatesWithNgrokAccept(b *tg.Bot, secretToken, endPoint string) (<-chan tg.
 		tg.WithWebhookSet(whp))
 }
 
+// convert forwardsTo to host:port
 func addressWebHook(forwardsTo string) (hp string) {
 	hp = strings.TrimPrefix(forwardsTo, ":")
 	_, err := strconv.Atoi(hp)
@@ -281,6 +293,7 @@ func addressWebHook(forwardsTo string) (hp string) {
 	return
 }
 
+// start webhook over ngrok channel
 func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 	var (
 		endPoint = "/" + fmt.Sprint(time.Now().Format("2006010215040501"))
@@ -300,7 +313,7 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 			if err == nil {
 				ltf.Println("UpdatesWithNgrok")
 				if tt != tth {
-					tt = ttm
+					tt = tth
 					tacker.Reset(tth) // next reconnect after tth
 					SendError(bot, Errorf("UpdatesWithNgrok"))
 				}
@@ -328,6 +341,7 @@ func ngrokWebHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 	return updates, nil
 }
 
+// is webhook ip same as ngrok endpoint ip
 func manInTheMiddle(bot *tg.Bot) bool {
 	// Receive information about webhook
 	info, err := bot.GetWebhookInfo()
@@ -357,8 +371,10 @@ func manInTheMiddle(bot *tg.Bot) bool {
 	return true
 }
 
+// telego logger interface
 type Logger struct{}
 
+// hide bot token
 func woToken(format string, args ...any) (s string) {
 	s = src(10) + " " + fmt.Sprintf(format, args...)
 	btStart := strings.Index(s, "/bot") + 4
@@ -370,6 +386,8 @@ func woToken(format string, args ...any) (s string) {
 	}
 	return
 }
+
+// bot debug message
 func (Logger) Debugf(format string, args ...any) {
 	if getUpdates != nil && format == "API response %s: %s" && args[0] == "getUpdates" {
 		getUpdates.Reset(time.Millisecond)
@@ -377,10 +395,12 @@ func (Logger) Debugf(format string, args ...any) {
 	lt.Print(woToken(format, args...))
 }
 
+// bot error message
 func (Logger) Errorf(format string, args ...any) {
 	let.Print(woToken(format, args...))
 }
 
+// send error message to first chatID in args
 func SendError(bot *tg.Bot, err error) {
 	if bot != nil && len(chats) > 0 && err != nil {
 		bot.SendMessage(tu.MessageWithEntities(tu.ID(chats[0]),

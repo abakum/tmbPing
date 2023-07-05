@@ -10,6 +10,7 @@ type config struct {
 	C *customers
 }
 
+// load json
 func loader() error {
 	cus := customers{}
 	conf := config{&dic, &cus}
@@ -28,6 +29,7 @@ func loader() error {
 	return nil
 }
 
+// save json
 func saver() {
 	defer wg.Done()
 	cus := customers{}

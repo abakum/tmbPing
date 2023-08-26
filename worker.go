@@ -110,11 +110,15 @@ func worker(ip string, ch cCustomer) {
 					if !chats.allowed(tf(cu.Tm.Chat.Type == "private", cu.Tm.From.ID, cu.Tm.Chat.ID)) {
 						ikbsf = len(ikbs) - 1
 					}
-					cus[i].Reply, _ = bot.SendMessage(tu.MessageWithEntities(tu.ID(cu.Tm.Chat.ID),
+					cus[i].Reply, err = bot.SendMessage(tu.MessageWithEntities(tu.ID(cu.Tm.Chat.ID),
 						tu.Entity(status),
 						tu.Entity(ip).Code(),
 						tu.Entity("⚡").TextLink(tl),
 					).WithReplyToMessageID(cu.Tm.MessageID).WithReplyMarkup(tu.InlineKeyboard(tu.InlineKeyboardRow(ikbs[ikbsf:]...))))
+					if err != nil {
+						letf.Println("delete", ip)
+						ips.del(ip, false)
+					}
 				}
 			}
 		}

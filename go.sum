@@ -1,5 +1,7 @@
 github.com/abakum/MoonPhase v0.0.0-20230421054831-2ebc61adbf86 h1:p9ZNBae6gWejsqFEexondXAvhA7gELv8R9kDr02DdY4=
 github.com/abakum/MoonPhase v0.0.0-20230421054831-2ebc61adbf86/go.mod h1:oeu6zh7iIf7fieQ12mwe7p1KxwpTnQPyw01JE7JrSA0=
+github.com/abakum/go-stun v0.0.0-20250212141223-dbe4829d53a8 h1:sBNaQ7xfI8itEAuz3vgeIw3AhZEaEGUO8MppVjEUMho=
+github.com/abakum/go-stun v0.0.0-20250212141223-dbe4829d53a8/go.mod h1:etuFi94B6IcKvUtYVT7m1oCFMf9J4t9QfYOBmBHuJZo=
 github.com/abakum/gozodiac v0.0.0-20230421061758-fa2f82ab0d93 h1:nfHmluJxHu+PLRpyU4XsoCB8RnaOlkEys8hXkwRo7gU=
 github.com/abakum/gozodiac v0.0.0-20230421061758-fa2f82ab0d93/go.mod h1:bdnSVcc5g8Lkalefs6IrMIEoNggBx/1EwQNOpEStQ/Y=
 github.com/andybalholm/brotli v1.0.5 h1:8uQZIdzKmjc/iuPu7O2ioW48L81FgatrcpfFmiq/cCs=

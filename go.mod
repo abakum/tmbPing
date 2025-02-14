@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/abakum/go-stun v0.0.0-20250212141223-dbe4829d53a8 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/uuid v1.3.0 // indirect

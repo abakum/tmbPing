@@ -466,3 +466,124 @@ func SendError(bot *tg.Bot, err error) {
 // 	}()
 // 	return updates, &tun, err
 // }
+
+// start webhook
+func webHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
+	var (
+		endPoint = "/" + fmt.Sprint(time.Now().Format("2006010215040501"))
+		secret   = endPoint[rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(endPoint)-3)+1:]
+	)
+	forwardsTo := Getenv("forwardsTo", "127.0.0.1:80")
+	publicURL := os.Getenv("publicURL")
+	k := ""
+	funcs := []func() (<-chan tg.Update, error){}
+	funcs = append(funcs, func() (<-chan tg.Update, error) {
+		k = "loophole.site"
+		if strings.HasSuffix(publicURL, "."+k) {
+			hostname := strings.TrimSuffix(publicURL, "."+k)
+			hostname = strings.TrimPrefix(hostname, "http://")
+			hostname = strings.TrimPrefix(hostname, "https://")
+			h, p, err := net.SplitHostPort(forwardsTo)
+			if err != nil {
+				h = "127.0.0.1"
+				p = "80"
+			}
+			ltf.Printf("cli --hostname %s http %s %s", hostname, p, h)
+			return UpdatesWithSecret(bot, secret, publicURL, endPoint)
+		}
+		return nil, fmt.Errorf("not used %s", k)
+	})
+	funcs = append(funcs, func() (<-chan tg.Update, error) {
+		k = "devhook.ru"
+		if strings.HasSuffix(publicURL, "."+k) {
+			devhook := strings.TrimSuffix(publicURL, "."+k)
+			// ssh -p 2222 -R %devhook%:80:%forwardsTo% devhook.ru
+			ltf.Printf("ssh -p 2222 -R %s:80:%s %s", addressWebHook(devhook), forwardsTo, k)
+			return UpdatesWithSecret(bot, secret, publicURL, endPoint)
+		}
+		return nil, fmt.Errorf("not used %s", k)
+	})
+	funcs = append(funcs, func() (<-chan tg.Update, error) {
+		k = "cloudpub.ru"
+		if strings.HasSuffix(publicURL, "."+k) {
+			ltf.Println("clo run")
+			return UpdatesWithSecret(bot, secret, publicURL, endPoint)
+		}
+		return nil, fmt.Errorf("not used %s", k)
+	})
+	funcs = append(funcs, func() (<-chan tg.Update, error) {
+		k = "DDNS"
+		if publicURL != "" {
+			return UpdatesWithSecret(bot, secret, publicURL, endPoint)
+		}
+		return nil, fmt.Errorf("not used %s", k)
+	})
+	funcs = append(funcs, func() (<-chan tg.Update, error) {
+		k = "getExternalIP"
+		if publicURL == "" {
+			p := ""
+			p, k, err = GetExternalIP(time.Second, "stun.sipnet.ru:3478", "stun.l.google.com:19302", "stun.fitauto.ru:3478")
+			if err == nil {
+				publicURL = "http://" + p
+				return UpdatesWithSecret(bot, secret, publicURL, endPoint)
+			}
+		}
+		return nil, fmt.Errorf("not used %s", k)
+	})
+	funcs = append(funcs, func() (<-chan tg.Update, error) {
+		k = "web_addr"
+		if v := os.Getenv(k); v != "" {
+			if p, f, err := ngrokWeb(); err == nil {
+				publicURL, forwardsTo = p, f
+				return UpdatesWithSecret(bot, secret, publicURL, endPoint)
+			}
+		}
+		return nil, fmt.Errorf("not used %s", k)
+	})
+	funcs = append(funcs, func() (<-chan tg.Update, error) {
+		k = "NGROK_API_KEY"
+		if v := os.Getenv(k); v != "" {
+			if p, f, err := ngrokAPI(v); err == nil {
+				publicURL, forwardsTo = p, f
+				return UpdatesWithSecret(bot, secret, publicURL, endPoint)
+			}
+		}
+		return nil, fmt.Errorf("not used %s", k)
+	})
+	funcs = append(funcs, func() (<-chan tg.Update, error) {
+		k = "NGROK_AUTHTOKEN"
+		if v := os.Getenv(k); v != "" {
+			if p, f, err := ngrokAPI(v); err == nil {
+				publicURL, forwardsTo = p, f
+				updates, err = UpdatesWithNgrok(bot, "", endPoint)
+				if err == nil && tt != tth {
+					tt = tth
+					tacker.Reset(tt)
+				}
+				return updates, err
+			}
+		}
+		return nil, fmt.Errorf("not used %s", k)
+	})
+	for _, f := range funcs {
+		updates, err = f()
+		if err == nil {
+			ltf.Printf("%s", k)
+			SendError(bot, Errorf(k))
+			break
+		}
+		ltf.Println(k, publicURL, forwardsTo, err)
+	}
+	if err != nil {
+		return nil, srcError(err)
+	}
+	chErr := make(chan error)
+	time.AfterFunc(time.Second, func() { chErr <- nil })
+	go func() {
+		chErr <- bot.StartWebhook(addressWebHook(forwardsTo))
+		tt = ttm
+		tacker.Reset(tt)
+	}()
+	err = <-chErr
+	return updates, srcError(err)
+}

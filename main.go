@@ -170,9 +170,9 @@ func DeleteWebhook(bot *tg.Bot) {
 
 // start handler and webhook or polling
 func startH(bot *tg.Bot) (*th.BotHandler, error) {
-	updates, err := ngrokWebHook(bot)
+	updates, err := webHook(bot)
 	if err != nil {
-		PrintOk("ngrokWebHook", err)
+		PrintOk("webHook", err)
 		if tt != ttm {
 			tt = ttm
 			tacker.Reset(ttm) // next try after ttm

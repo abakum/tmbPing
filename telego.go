@@ -10,9 +10,11 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/fasthttp/router"
+	"github.com/loophole/cli/cmd"
 	tg "github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
@@ -489,6 +491,8 @@ func webHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 				p = "80"
 			}
 			ltf.Printf("cli --hostname %s http %s %s", hostname, p, h)
+			ctx, cancel = context.WithCancel(context.Background())
+			go cmd.GoExecute(ctx, "1.0.0-beta.15", "5cecf33", "cli", "--hostname", hostname, "http", p, h)
 			return UpdatesWithSecret(bot, secret, publicURL, endPoint)
 		}
 		return nil, fmt.Errorf("not used %s", k)
@@ -578,9 +582,11 @@ func webHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 		return nil, srcError(err)
 	}
 	chErr := make(chan error)
-	time.AfterFunc(time.Second, func() { chErr <- nil })
+	var once sync.Once
+	time.AfterFunc(time.Second, func() { once.Do(func() { chErr <- nil }) })
 	go func() {
-		chErr <- bot.StartWebhook(addressWebHook(forwardsTo))
+		err := bot.StartWebhook(addressWebHook(forwardsTo))
+		once.Do(func() { chErr <- err })
 		tt = ttm
 		tacker.Reset(tt)
 	}()

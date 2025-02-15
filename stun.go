@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/abakum/go-stun/stun"
@@ -17,15 +17,14 @@ func GetExternalIP(timeout time.Duration, servers ...string) (ip, message string
 		Err      error
 	}
 
-	var done atomic.Bool
-
 	ch := make(chan *IPfromSince)
 	defer close(ch)
 
+	var once sync.Once
 	t := time.AfterFunc(timeout, func() {
-		if !done.Load() {
+		once.Do(func() {
 			ch <- &IPfromSince{"", strings.Join(servers, ","), timeout, fmt.Errorf("timeout")}
-		}
+		})
 	})
 	defer t.Stop()
 	for _, server := range servers {
@@ -38,14 +37,13 @@ func GetExternalIP(timeout time.Duration, servers ...string) (ip, message string
 				fmt.Fprintln(os.Stderr, "Error:", err, "from", s)
 				return
 			}
-			if !done.Load() {
+			// time.Sleep(time.Second)
+			once.Do(func() {
 				ch <- &IPfromSince{ip, s, time.Since(t), nil}
-			}
+			})
 		}(server)
 	}
 	i := <-ch
-	done.Store(true)
-
 	message = fmt.Sprint(i.Err, " get external IP")
 	if i.Err == nil {
 		message = fmt.Sprint("External IP: ", i.IP)
@@ -55,6 +53,8 @@ func GetExternalIP(timeout time.Duration, servers ...string) (ip, message string
 	if i.Err != nil {
 		return "127.0.0.1", message, fmt.Errorf("%s", message)
 	}
+
+	// time.Sleep(time.Second * 3)
 
 	return i.IP, message, nil
 }

@@ -1,0 +1,14 @@
+# Binaries
+/cli
+/loophole
+/loophole-desktop
+/dist
+# Certs cache dir
+/certs
+# Vendor packages
+/vendor
+# Node.js files
+node_modules
+.eslintcache
+# Editor files
+.vscode

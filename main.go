@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -18,15 +17,13 @@ import (
 )
 
 var (
-	ctx    context.Context
-	cancel context.CancelFunc
+	quitChannel = make(chan bool)
 )
 
 func main() {
 	var (
 		err error
 	)
-	ctx, cancel = context.WithCancel(context.Background())
 	defer closer.Close()
 	closer.Bind(func() {
 		if err != nil {
@@ -151,7 +148,7 @@ func stopH(bot *tg.Bot, bh *th.BotHandler) error {
 	}
 	if bot != nil {
 		if bot.IsRunningWebhook() {
-			cancel()
+			quitChannel <- true
 			return srcError(bot.StopWebhook())
 		}
 		if bot.IsRunningLongPolling() {

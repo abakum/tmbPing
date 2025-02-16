@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	stdlog "log"
 	"os"
@@ -62,17 +61,4 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
-}
-
-// GoExecute runs command parsing chain from go.
-// Look example ../example/main.go.
-func GoExecute(ctx context.Context, version, commit, mode string, args ...string) error {
-	config.Config.Version = version
-	config.Config.CommitHash = commit
-	config.Config.ClientMode = mode
-
-	rootCmd.Version = fmt.Sprintf("%s (%s)", config.Config.Version, config.Config.CommitHash)
-
-	rootCmd.SetArgs(args)
-	return rootCmd.ExecuteContext(ctx)
 }

@@ -491,9 +491,13 @@ func webHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 				p = "80"
 			}
 			ltf.Printf("cli --hostname %s http %s %s", hostname, p, h)
-			ctx, cancel = context.WithCancel(context.Background())
-			go cmd.GoExecute(ctx, "1.0.0-beta.15", "5cecf33", "cli", "--hostname", hostname, "http", p, h)
-			return UpdatesWithSecret(bot, secret, publicURL, endPoint)
+			// ctx, cancel = context.WithCancel(context.Background())
+			// err = nilAfter(time.Second*7, func() error { return cmd.GoExecute(ctx, "1.0.0-beta.15", "5cecf33", "cli", "--hostname", hostname, "http", p, h) })
+			err = cmd.ForwarDPort("1.0.0-beta.15", "5cecf33", "cli", hostname, p, h, quitChannel)
+
+			if err == nil {
+				return UpdatesWithSecret(bot, secret, publicURL, endPoint)
+			}
 		}
 		return nil, fmt.Errorf("not used %s", k)
 	})
@@ -577,19 +581,36 @@ func webHook(bot *tg.Bot) (updates <-chan tg.Update, err error) {
 			break
 		}
 		ltf.Println(k, publicURL, forwardsTo, err)
+		if strings.HasPrefix(err.Error(), "not used") {
+			continue
+		}
+		break
 	}
 	if err != nil {
 		return nil, srcError(err)
 	}
-	chErr := make(chan error)
-	var once sync.Once
-	time.AfterFunc(time.Second, func() { once.Do(func() { chErr <- nil }) })
-	go func() {
-		err := bot.StartWebhook(addressWebHook(forwardsTo))
-		once.Do(func() { chErr <- err })
-		tt = ttm
-		tacker.Reset(tt)
-	}()
-	err = <-chErr
+	err = nilAfter(time.Second, func() error { return bot.StartWebhook(addressWebHook(forwardsTo)) })
 	return updates, srcError(err)
+}
+
+func nilAfter(d time.Duration, f func() error) (err error) {
+	var once sync.Once
+	ch := make(chan error)
+	defer close(ch)
+
+	go func() {
+		err := f()
+		once.Do(func() {
+			ch <- err
+		})
+	}()
+	select {
+	case err = <-ch:
+	case <-time.After(d):
+		once.Do(func() {})
+	}
+	if err != nil {
+		let.Println(err)
+	}
+	return
 }

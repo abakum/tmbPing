@@ -106,6 +106,7 @@ func forwarD(remoteEndpointSpecs lm.RemoteEndpointSpecs,
 			case <-quitChannel:
 				tunnelTerminatedOnPurpose = true
 				communication.TunnelStopSuccess(remoteEndpointSpecs.TunnelID)
+				defer server.Close()
 				defer serverSSHConnHTTPS.Close()
 				defer (*listenerHTTPSOverSSH).Close()
 				return

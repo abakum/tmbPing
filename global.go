@@ -15,10 +15,10 @@ import (
 
 const (
 	numFL   = `(25[0-4]|2[0-4][0-9]|1[0-9][0-9]|[1-9][0-9]|[1-9])`
-	ttm     = time.Minute * 10
 	tth     = time.Hour * 2
 	refresh = time.Second * 60
 	dd      = time.Hour * 8
+	ttm     = time.Minute * 10
 )
 
 var (
@@ -48,10 +48,12 @@ var (
 		tu.InlineKeyboardButton("⏸️").WithCallbackData("…⏸️❌"),
 		tu.InlineKeyboardButton("❎").WithCallbackData("❎"),
 	}
-	ikbsf      int
-	wg         sync.WaitGroup
-	bh         *th.BotHandler
-	getUpdates = make(chan bool, 2)
+	ikbsf int
+	wg    sync.WaitGroup
+	bh    *th.BotHandler
+	// getUpdates   = make(chan bool, 2)
+	quitChannel  = make(chan bool, 2)
+	quit2Channel = make(chan bool, 2)
 )
 
 // ping customer

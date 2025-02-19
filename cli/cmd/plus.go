@@ -14,6 +14,7 @@ import (
 	lm "github.com/loophole/cli/internal/app/loophole/models"
 	"github.com/loophole/cli/internal/pkg/communication"
 	"github.com/loophole/cli/internal/pkg/token"
+	"github.com/loophole/cli/internal/pkg/urlmaker"
 )
 
 // GoExecute runs command parsing chain from go.
@@ -29,7 +30,9 @@ func GoExecute(ctx context.Context, version, commit, mode string, args ...string
 	return rootCmd.ExecuteContext(ctx)
 }
 
-func ForwarDPort(version, commit, mode, hostname, p, h string, quitChannel chan bool) (err error) {
+// Like GoExecute(ctx, version, commit, mode, "--hostname", hostname, "http", p, h)
+// but without communication.Fatal in case of an unsuccessful attempt loophole.RegisterTunnel
+func ForwarDPort(version, commit, mode, hostname, p, h string, quitChannel chan bool) (siteAddr string, err error) {
 	// rootInit
 	// cobra.OnInitialize(initLogger)
 
@@ -60,9 +63,8 @@ func ForwarDPort(version, commit, mode, hostname, p, h string, quitChannel chan 
 	}
 	authMethod, err := loophole.RegisterTunnel(&exposeConfig.Remote)
 	if err != nil {
-		communication.Fatal(err.Error())
-		return err
+		// communication.Fatal(err.Error())
+		return "", err
 	}
-
-	return loophole.ForwarDPort(exposeConfig, authMethod, quitChannel)
+	return urlmaker.GetSiteURL("https", exposeConfig.Remote.SiteID, exposeConfig.Remote.Domain), loophole.ForwarDPort(exposeConfig, authMethod, quitChannel)
 }

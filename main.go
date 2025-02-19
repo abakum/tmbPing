@@ -16,10 +16,6 @@ import (
 	"github.com/xlab/closer"
 )
 
-var (
-	quitChannel = make(chan bool)
-)
-
 func main() {
 	var (
 		err error
@@ -133,36 +129,37 @@ func main() {
 }
 
 // drain buffered chan c
-func drain(c chan bool) {
-	for len(c) > 0 {
-		<-c
-	}
-	ltf.Println("drain chan done")
-}
+// func drain(c chan bool) {
+// 	for len(c) > 0 {
+// 		<-c
+// 	}
+// 	ltf.Println("drain chan done")
+// }
 
 // stop handler, webhook, polling
-func stopH(bot *tg.Bot, bh *th.BotHandler) error {
+func stopH(bot *tg.Bot, bh *th.BotHandler) (err error) {
+	quit(quitChannel)
+	quit(quit2Channel)
+	if bot != nil {
+		if bot.IsRunningWebhook() {
+			ltf.Println("StopWebhook")
+			err = srcError(bot.StopWebhook())
+		} else if bot.IsRunningLongPolling() {
+			ltf.Println("StopLongPolling")
+			bot.StopLongPolling()
+			// drain(getUpdates)
+			// go func() {
+			// 	time.Sleep(time.Second * 8)
+			// 	getUpdates <- false
+			// }()
+			// ltf.Println("getUpdates", <-getUpdates)
+		}
+	}
 	if bh != nil {
 		ltf.Println("bh.Stop")
 		bh.Stop()
 	}
-	if bot != nil {
-		if bot.IsRunningWebhook() {
-			quitChannel <- true
-			return srcError(bot.StopWebhook())
-		}
-		if bot.IsRunningLongPolling() {
-			ltf.Println("StopLongPolling")
-			bot.StopLongPolling()
-			drain(getUpdates)
-			go func() {
-				time.Sleep(time.Second * 8)
-				getUpdates <- false
-			}()
-			ltf.Println("getUpdates", <-getUpdates)
-		}
-	}
-	return nil
+	return
 }
 
 func DeleteWebhook(bot *tg.Bot) {
@@ -178,20 +175,24 @@ func startH(bot *tg.Bot) (*th.BotHandler, error) {
 	updates, err := webHook(bot)
 	if err != nil {
 		PrintOk("webHook", err)
+		DeleteWebhook(bot)
 		if tt != ttm {
 			tt = ttm
 			tacker.Reset(ttm) // next try after ttm
-			SendError(bot, err)
-			DeleteWebhook(bot)
 		}
-		updates, err = bot.UpdatesViaLongPolling(nil)
+		// updates, err = bot.UpdatesViaLongPolling(nil)
+		updates, err = bot.UpdatesViaLongPolling(&tg.GetUpdatesParams{Timeout: int(refresh.Seconds())})
 		if err != nil {
 			return nil, err
 		}
-		letf.Println("UpdatesViaLongPolling")
+		// SendError(bot, fmt.Errorf("updatesViaLongPolling"))
+		letf.Println("updatesViaLongPolling")
+	} else {
+		// SendError(bot, fmt.Errorf("updatesViaWebHook"))
+		ltf.Println("updatesViaWebHook")
 	}
 
-	bh, err := th.NewBotHandler(bot, updates)
+	bh, err := th.NewBotHandler(bot, updates, th.WithStopTimeout(time.Second*8))
 	if err != nil {
 		return nil, srcError(err)
 	}
